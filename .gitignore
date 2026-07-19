@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Bron- & CAD-bestanden (niet nodig voor de site)
+/*.skp
+/*.pdf
+/*.mp4
+/*.gif
+/*.webp
+
+# Ruwe/onbewerkte upload-foto's in de root — de site gebruikt uitsluitend assets/
+/*.png
+/*.PNG
+/*.jpg
+/*.JPG
+/*.jpeg
+/*.JPEG
+
+# Ongebruikt / scratch / dev
+/_*.html
+/scene3d.js
+/snippets/
+/blower-esam-tecno-jet-1
+
+# Claude Code tool-config
+.claude/
