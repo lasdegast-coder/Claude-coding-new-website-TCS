@@ -25,3 +25,20 @@
 
 # Claude Code tool-config
 .claude/
+
+# Originele teamfotos (bron) — de site gebruikt assets/photos/team-*.jpg
+/About us page/
+
+# Werkbestanden en bronmateriaal die niet op de site horen
+/ROI-calculator-berekeningen.xlsx
+/Nieuwsupdates/
+/formulier-backend/
+~$*
+
+# Ruwe uploadmappen met bronmateriaal. De site gebruikt uitsluitend assets/.
+/About us page/
+/kassen voorbeeldpagina/
+/veehouders voorbeeldpagina/
+/compost /
+/blower-esam-tecno-jet-1/
+/snippets/

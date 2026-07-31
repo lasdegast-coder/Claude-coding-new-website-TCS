@@ -44,24 +44,37 @@
   if (prefersReduced || !("IntersectionObserver" in window)) {
     revealEls.forEach((el) => el.classList.add("in"));
   } else {
+    // Elementen die hoger zijn dan het scherm halen de 14%-drempel soms nooit
+    // (bv. de calculator: 2500px hoog, waarvan er maar ~300px in beeld komt als je
+    // er via een ankerlink naartoe springt). Die onthullen we zodra ze in beeld komen.
     const io = new IntersectionObserver((entries, obs) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
+        if (!entry.isIntersecting) return;
+        const lang = entry.boundingClientRect.height > window.innerHeight * 0.6;
+        if (lang || entry.intersectionRatio >= 0.14) {
           entry.target.classList.add("in");
           obs.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.14, rootMargin: "0px 0px -8% 0px" });
+    }, { threshold: [0, 0.14], rootMargin: "0px 0px -8% 0px" });
     revealEls.forEach((el) => io.observe(el));
   }
 
   /* ---------- Count-up stats ---------- */
   const counters = Array.from(document.querySelectorAll("[data-count]"));
+  const nlGetal = new Intl.NumberFormat("nl-NL");
+  // Eenheden (" m³", " MWh", "%") krijgen een kleiner formaat, zodat lange waarden
+  // als "20.000 m³" op één regel passen. Achtervoegsels als "/7" blijven even groot.
+  const toonWaarde = (el, val, prefix, suffix) => {
+    const klein = /^[\s%]/.test(suffix);
+    el.innerHTML = prefix + nlGetal.format(val) +
+      (suffix ? (klein ? '<span class="stat-unit">' + suffix + "</span>" : suffix) : "");
+  };
   const runCounter = (el) => {
     const target = parseFloat(el.getAttribute("data-count"));
     const suffix = el.getAttribute("data-suffix") || "";
     const prefix = el.getAttribute("data-prefix") || "";
-    if (prefersReduced) { el.textContent = prefix + target + suffix; return; }
+    if (prefersReduced) { toonWaarde(el, target, prefix, suffix); return; }
     const dur = 1400;
     let start = null;
     const step = (ts) => {
@@ -69,7 +82,7 @@
       const p = Math.min((ts - start) / dur, 1);
       const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
       const val = Math.round(eased * target);
-      el.textContent = prefix + val + suffix;
+      toonWaarde(el, val, prefix, suffix);
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -119,7 +132,41 @@
   /* ---------- Contact form validation + submit feedback ---------- */
   const form = document.querySelector(".contact-form");
   if (form) {
+    /* Web-app-URL van het Apps Script in de Workspace van Thermal Compost Systems.
+       Zie formulier-backend/INSTRUCTIES.md. Zolang deze leeg is, toont het
+       formulier de mailoptie in plaats van te doen alsof het verstuurd is. */
+    const ENDPOINT = "";
+
+    const CONTACTMAIL = "Contact@thermalcompostsystems.nl";
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    /* ---- berekening uit de rekenhulp meenemen ---- */
+    const berekeningVeld = form.querySelector("#berekening");
+    const berekeningRegel = form.querySelector(".form-berekening");
+    const vinkje = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true" style="flex-shrink:0;margin-top:2px"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const toonBerekening = () => {
+      if (!berekeningVeld || !berekeningRegel) return;
+      const b = window.tcsBerekening ? window.tcsBerekening() : null;
+      if (!b) { berekeningVeld.value = ""; berekeningRegel.hidden = true; return; }
+      berekeningVeld.value = b.tekst;
+      berekeningRegel.innerHTML = vinkje + '<span class="fb-tekst"></span>';
+      const span = berekeningRegel.querySelector(".fb-tekst");
+      if (b.kort) {
+        span.textContent = "Uw berekening wordt meegestuurd: ";
+        const sterk = document.createElement("strong");
+        sterk.textContent = b.kort;
+        span.appendChild(sterk);
+      } else {
+        span.textContent = "Uw ingevulde gegevens uit de rekenhulp worden meegestuurd.";
+      }
+      berekeningRegel.hidden = false;
+    };
+    const roiForm = document.getElementById("roi-form");
+    if (roiForm) {
+      roiForm.addEventListener("input", toonBerekening);
+      roiForm.addEventListener("change", toonBerekening);
+    }
+    toonBerekening();
     const setError = (input, msg) => {
       const errEl = form.querySelector(`[data-error-for="${input.id}"]`);
       input.classList.toggle("invalid", !!msg);
@@ -152,20 +199,80 @@
 
       const btn = form.querySelector("button[type=submit]");
       const success = form.querySelector(".form-success");
-      btn.classList.add("loading");
-      btn.disabled = true;
+      const foutBlok = form.querySelector(".form-error");
+      const veld = (id) => { const el = form.querySelector("#" + id); return el ? el.value.trim() : ""; };
 
-      // Simulate async submit. NOTE: hook this up to a real endpoint/mailer.
-      setTimeout(() => {
-        btn.classList.remove("loading");
-        btn.disabled = false;
+      toonBerekening();
+      const gegevens = {
+        naam: veld("naam"),
+        bedrijf: veld("bedrijf"),
+        email: veld("email"),
+        telefoon: veld("telefoon"),
+        segment: veld("segment"),
+        bericht: veld("bericht"),
+        berekening: veld("berekening"),
+        website: veld("website"), // spamval
+      };
+
+      const klaar = () => { btn.classList.remove("loading"); btn.disabled = false; };
+
+      const gelukt = () => {
+        klaar();
         form.reset();
+        toonBerekening();
+        if (foutBlok) foutBlok.hidden = true;
         if (success) {
           success.hidden = false;
           success.scrollIntoView({ behavior: prefersReduced ? "auto" : "smooth", block: "center" });
-          setTimeout(() => { success.hidden = true; }, 6000);
+          setTimeout(() => { success.hidden = true; }, 8000);
         }
-      }, 1100);
+      };
+
+      // Gaat er iets mis, dan raakt de bezoeker zijn ingevulde gegevens niet kwijt:
+      // de mailknop bevat alles wat hij zojuist heeft ingevuld.
+      const mislukt = () => {
+        klaar();
+        if (!foutBlok) return;
+        const regels = [
+          "Naam: " + gegevens.naam,
+          "Bedrijf: " + gegevens.bedrijf,
+          "E-mail: " + gegevens.email,
+          "Telefoon: " + (gegevens.telefoon || "-"),
+          "Segment: " + (gegevens.segment || "-"),
+          "",
+          gegevens.bericht || "(geen bericht)",
+        ];
+        if (gegevens.berekening) regels.push("", "Berekening:", gegevens.berekening);
+        const link = "mailto:" + CONTACTMAIL
+          + "?subject=" + encodeURIComponent("Aanvraag via de website")
+          + "&body=" + encodeURIComponent(regels.join("\n"));
+        foutBlok.innerHTML = "";
+        const p = document.createElement("p");
+        p.textContent = "Het verzenden lukte niet. Probeer het nog een keer, of stuur uw aanvraag rechtstreeks per mail. ";
+        const a = document.createElement("a");
+        a.href = link;
+        a.textContent = "Mail ons met deze gegevens";
+        p.appendChild(a);
+        foutBlok.appendChild(p);
+        foutBlok.hidden = false;
+        foutBlok.scrollIntoView({ behavior: prefersReduced ? "auto" : "smooth", block: "center" });
+      };
+
+      btn.classList.add("loading");
+      btn.disabled = true;
+      if (foutBlok) foutBlok.hidden = true;
+
+      if (!ENDPOINT) { mislukt(); return; }
+
+      // text/plain voorkomt een preflight-verzoek, dat Apps Script niet beantwoordt
+      fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(gegevens),
+      })
+        .then((res) => res.json())
+        .then((data) => { if (data && data.ok) gelukt(); else throw new Error((data && data.fout) || "onbekende fout"); })
+        .catch(mislukt);
     });
   }
 
@@ -252,4 +359,42 @@
     }
   };
   openFromHash();
+  // ook reageren als de hash verandert terwijl je al op de pagina bent
+  // (bv. via de "Voor wie"-dropdown in de navigatie)
+  window.addEventListener("hashchange", openFromHash);
+
+  /* ---------- Over ons: aanklikbare tijdlijn ---------- */
+  const tlKnoppen = Array.from(document.querySelectorAll(".tl-tab"));
+  const tlFoto = document.getElementById("tl-foto");
+  const tlTekst = document.getElementById("tl-tekst");
+  const tlBijschrift = document.getElementById("tl-bijschrift");
+  if (tlKnoppen.length && tlFoto && tlTekst && tlBijschrift) {
+    tlKnoppen.forEach((knop) => {
+      knop.addEventListener("click", () => {
+        tlKnoppen.forEach((k) => {
+          const actief = k === knop;
+          k.classList.toggle("is-actief", actief);
+          k.setAttribute("aria-pressed", actief ? "true" : "false");
+        });
+        tlFoto.src = knop.dataset.foto;
+        tlFoto.alt = knop.dataset.alt;
+        tlTekst.textContent = knop.dataset.tekst;
+        tlBijschrift.textContent = knop.dataset.bij;
+      });
+    });
+  }
+
+  /* ---------- Video: speler pas laden na een klik ---------- */
+  document.querySelectorAll(".video-embed[data-yt]").forEach((wrap) => {
+    const knop = wrap.querySelector(".video-play");
+    if (!knop) return;
+    knop.addEventListener("click", () => {
+      const frame = document.createElement("iframe");
+      frame.src = "https://www.youtube-nocookie.com/embed/" + wrap.dataset.yt + "?autoplay=1&rel=0";
+      frame.title = "Video";
+      frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      frame.allowFullscreen = true;
+      wrap.replaceChildren(frame);
+    });
+  });
 })();

@@ -17,6 +17,7 @@ const canvas = document.getElementById('scene3d-canvas');
 const track = document.getElementById('scene3d-track');
 const labelWrap = document.getElementById('scene3d-labels');
 const progressBar = document.querySelector('.scene3d-progress i');
+const hint = document.getElementById('scene3d-hint');
 if (canvas) init();
 
 const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -354,7 +355,7 @@ function init() {
       // --- labels ---
       const labelDefs = [
         { text: 'Compostmassa', pos: new THREE.Vector3(0, 1.6, 1.8) },
-        { text: 'Back-unit — ventilator + warmtewisseling', pos: new THREE.Vector3(0, 1.5, machineSign * (halfLen - 0.1)) },
+        { text: 'Back-unit: ventilator + warmtewisseling', pos: new THREE.Vector3(0, 1.5, machineSign * (halfLen - 0.1)) },
         { text: 'Warme lucht → warm water', pos: new THREE.Vector3(0.6, 2.4, machineSign * (halfLen - 1.8)) },
       ];
       const labels = labelDefs.map((d) => {
@@ -373,6 +374,7 @@ function init() {
         for (const k in explode) explode[k].g.position.copy(explode[k].dir).multiplyScalar(explode[k].mag * eAmt);
         back.position.z = backBaseZ + machineSign * 1.7 * eAmt; // witte kast schuift naar buiten
         if (progressBar) progressBar.style.width = (t * 100).toFixed(0) + '%';
+        if (hint) hint.classList.toggle('is-open', t > 0.88);
       }
       const _v = new THREE.Vector3();
       function projectLabels(t) {
@@ -394,11 +396,35 @@ function init() {
         if (total <= 0) return 0;
         return Math.min(1, Math.max(0, -track.getBoundingClientRect().top / total));
       }
+      /* Voorproef: zodra het blok goed in beeld staat opent de container
+         eenmalig een stuk en gaat weer dicht. Beweging laat zonder lezen zien
+         dat er iets te doen valt. Scrollt de bezoeker zelf, dan stopt hij. */
+      const TEASE_MAX = 0.17, TEASE_MS = 2000, TEASE_WACHT = 400;
+      let teaseStart = -1, teaseVal = 0, teaseKlaar = prefersReduced || revOverride !== null;
+      if (!teaseKlaar && track) {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting && teaseStart < 0) { teaseStart = performance.now(); io.disconnect(); }
+          });
+        }, { threshold: 0.5 });
+        io.observe(track.querySelector('.scene3d-sticky') || track);
+      }
+
       let tCur = 0;
       revealTick = () => {
         const target = scrollProgress();
         tCur = revOverride !== null ? target : tCur + (target - tCur) * 0.12;
-        setReveal(tCur); projectLabels(tCur);
+        if (!teaseKlaar && teaseStart >= 0) {
+          if (target > 0.01) teaseKlaar = true; // bezoeker is zelf begonnen
+          else {
+            const p = (performance.now() - teaseStart - TEASE_WACHT) / TEASE_MS;
+            if (p >= 1) teaseKlaar = true;
+            else if (p > 0) teaseVal = TEASE_MAX * Math.sin(Math.PI * p);
+          }
+        }
+        if (teaseKlaar && teaseVal > 0.0005) teaseVal += (0 - teaseVal) * 0.12; // vloeiend terug
+        const t = Math.max(tCur, teaseVal);
+        setReveal(t); projectLabels(t);
       };
       setReveal(0);
 

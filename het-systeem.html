@@ -3,15 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex, nofollow" />
-  <title>Het systeem — Thermal Compost Systems</title>
+  <title>Het systeem | Thermal Compost Systems</title>
   <meta name="description" content="Hoe het compost-warmtesysteem werkt: één verplaatsbare 40ft container die organisch afval omzet in warmte én hoogwaardige compost." />
   <meta name="theme-color" content="#1B3A2C" />
+  <link rel="canonical" href="https://thermalcompostsystems.nl/het-systeem.html" />
+
+  <!-- Tabblad-icoon -->
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+  <!-- Voorbeeldkaart bij delen op LinkedIn, WhatsApp en dergelijke -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Thermal Compost Systems" />
+  <meta property="og:locale" content="nl_NL" />
+  <meta property="og:title" content="Het systeem | Thermal Compost Systems" />
+  <meta property="og:description" content="Hoe het compost-warmtesysteem werkt: één verplaatsbare 40ft container die organisch afval omzet in warmte én hoogwaardige compost." />
+  <meta property="og:url" content="https://thermalcompostsystems.nl/het-systeem.html" />
+  <meta property="og:image" content="https://thermalcompostsystems.nl/assets/og-image.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Nathan van den Dool bij de geopende compostcontainer" />
+  <meta name="twitter:card" content="summary_large_image" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="styles.css?v=27" />
+  <link rel="stylesheet" href="styles.css?v=61" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -20,7 +39,7 @@
   <!-- HEADER -->
   <header class="site-header" id="top">
     <div class="container nav-inner">
-      <a class="brand" href="index.html" aria-label="Thermal Compost Systems — home">
+      <a class="brand" href="index.html" aria-label="Thermal Compost Systems, home">
         <img class="brand-logo" src="assets/logo.png" alt="Thermal Compost Systems" onerror="this.closest('.brand').classList.add('no-logo');this.remove();" />
         <span class="brand-fallback">
           <span class="brand-mark" aria-hidden="true">
@@ -33,10 +52,30 @@
         </span>
       </a>
       <nav class="nav-links" aria-label="Hoofdnavigatie">
-        <a href="index.html#systeem">Het systeem</a>
-        <a href="index.html#voor-wie">Voor wie</a>
+        <div class="nav-drop">
+          <a href="index.html#systeem" class="nav-drop-trigger">
+            Het systeem
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <div class="nav-drop-menu">
+            <a href="het-systeem.html">Techniek</a>
+            <a href="compost.html">Compost</a>
+          </div>
+        </div>
+        <div class="nav-drop">
+          <a href="index.html#voor-wie" class="nav-drop-trigger">
+            Voor wie
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <div class="nav-drop-menu">
+            <a href="index.html#modal-kassen">Kassen &amp; tuincentra</a>
+            <a href="index.html#modal-veehouders">Veehouders</a>
+            <a href="index.html#modal-vastgoed">Vastgoed &amp; landgoederen</a>
+          </div>
+        </div>
+        <a href="index.html#calculator">Bereken</a>
+        <a href="nieuws.html">Nieuws</a>
         <a href="team.html">Over ons</a>
-        <a href="index.html#faq">FAQ</a>
       </nav>
       <a href="index.html#contact" class="btn btn-primary btn-sm nav-cta">Plan een gesprek</a>
       <button class="nav-toggle" aria-label="Menu openen" aria-expanded="false" aria-controls="mobile-menu">
@@ -45,9 +84,15 @@
     </div>
     <div class="mobile-menu" id="mobile-menu" hidden>
       <a href="index.html#systeem">Het systeem</a>
+      <a class="mobile-sub" href="het-systeem.html">Techniek</a>
+      <a class="mobile-sub" href="compost.html">Compost</a>
       <a href="index.html#voor-wie">Voor wie</a>
+      <a class="mobile-sub" href="index.html#modal-kassen">Kassen &amp; tuincentra</a>
+      <a class="mobile-sub" href="index.html#modal-veehouders">Veehouders</a>
+      <a class="mobile-sub" href="index.html#modal-vastgoed">Vastgoed &amp; landgoederen</a>
+      <a href="index.html#calculator">Bereken uw besparing</a>
+      <a href="nieuws.html">Nieuws</a>
       <a href="team.html">Over ons</a>
-      <a href="index.html#faq">FAQ</a>
       <a href="index.html#contact" class="btn btn-primary">Plan een gesprek</a>
     </div>
   </header>
@@ -59,32 +104,12 @@
       </nav>
     </div>
 
-    <!-- HET SYSTEEM UIT ELKAAR (3D exploded view) -->
-    <section class="section" id="onderdelen">
-      <div class="container">
-        <div class="section-head reveal" data-reveal>
-          <p class="eyebrow">De onderdelen</p>
-          <h2 class="section-title">Kijk in het systeem</h2>
-          <p class="section-lead">Een 3D-weergave van de container. Sleep om te draaien, scroll om de container te openen.</p>
-        </div>
-      </div>
-      <div class="scene3d-track" id="scene3d-track">
-        <div class="scene3d-sticky">
-          <canvas id="scene3d-canvas"></canvas>
-          <div class="scene3d-labels" id="scene3d-labels"></div>
-          <div class="scene3d-progress"><i></i></div>
-          <div class="scene3d-hint">Sleep om te draaien · scroll om te onthullen</div>
-          <noscript><p class="scene3d-fallback">Zet JavaScript aan om de 3D-weergave te zien.</p></noscript>
-        </div>
-      </div>
-    </section>
-
     <!-- IN DE CONTAINER -->
     <section class="section" id="techniek">
       <div class="container">
         <div class="section-head reveal" data-reveal>
           <p class="eyebrow">In de container</p>
-          <h2 class="section-title">Alle techniek aan boord</h2>
+          <h1 class="section-title">Alle techniek aan boord</h1>
           <p class="section-lead">Composteerruimte, warmtewisseling, beluchting en regeling zitten geïntegreerd in één robuuste high-cube container, klaar voor gebruik, zonder vaste bouw op uw terrein.</p>
         </div>
 
@@ -125,6 +150,32 @@
       </div>
     </section>
 
+    <!-- HET SYSTEEM UIT ELKAAR (3D exploded view) -->
+    <section class="section" id="onderdelen">
+      <div class="container">
+        <div class="section-head reveal" data-reveal>
+          <p class="eyebrow">De onderdelen</p>
+          <h2 class="section-title">Kijk in het systeem</h2>
+          <p class="section-lead">Een 3D-weergave van de container. Scroll om hem te openen en van binnen te bekijken.</p>
+        </div>
+      </div>
+      <div class="scene3d-track" id="scene3d-track">
+        <div class="scene3d-sticky">
+          <canvas id="scene3d-canvas"></canvas>
+          <div class="scene3d-labels" id="scene3d-labels"></div>
+          <div class="scene3d-progress"><i></i></div>
+          <div class="scene3d-hint" id="scene3d-hint">
+            <span class="hint-scroll">
+              Scroll om de container te openen
+              <svg class="hint-arrow" viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="hint-drag">Sleep om te draaien</span>
+          </div>
+          <noscript><p class="scene3d-fallback">Zet JavaScript aan om de 3D-weergave te zien.</p></noscript>
+        </div>
+      </div>
+    </section>
+
     <!-- ================= ONDERDEEL-MODALS ================= -->
     <dialog class="case-modal" id="modal-tech-composteerruimte" aria-labelledby="modal-tech-composteerruimte-title">
       <div class="case-modal-inner">
@@ -133,7 +184,7 @@
         <div class="case-content">
           <p class="eyebrow">Onderdeel</p>
           <h3 class="case-title" id="modal-tech-composteerruimte-title">Maximale composteerruimte in 30 m²</h3>
-          <p class="case-lead">De volledige container is composteerruimte — een grote verwerkingscapaciteit op slechts 30 m². Onder gecontroleerde omstandigheden (temperatuur, vocht en lucht) verloopt het proces gelijkmatig, wat zorgt voor een stabiele warmteproductie én hoogwaardige compost.</p>
+          <p class="case-lead">De volledige container is composteerruimte, met een grote verwerkingscapaciteit op slechts 30 m². Onder gecontroleerde omstandigheden (temperatuur, vocht en lucht) verloopt het proces gelijkmatig, wat zorgt voor een stabiele warmteproductie én hoogwaardige compost.</p>
           <ul class="case-bullets">
             <li>Grote capaciteit op een klein oppervlak (30 m²)</li>
             <li>Gecontroleerde omstandigheden → gelijkmatig proces</li>
@@ -148,15 +199,15 @@
     <dialog class="case-modal" id="modal-tech-warmtewisselaar" aria-labelledby="modal-tech-warmtewisselaar-title">
       <div class="case-modal-inner">
         <button class="case-close" type="button" aria-label="Venster sluiten"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
-        <div class="case-media"><img src="assets/photos/tech-warmtewisselaar.jpg" alt="De warmtewisselaar en leidingen in de machinekant" /></div>
+        <div class="case-media"><img src="assets/photos/tech-warmtewisselaar.jpg" alt="De warmtewisselaar met het kanaalwerk boven in de machinekant" width="1702" height="941" /></div>
         <div class="case-content">
           <p class="eyebrow">Onderdeel</p>
           <h3 class="case-title" id="modal-tech-warmtewisselaar-title">Warmte oogsten die anders verloren gaat</h3>
-          <p class="case-lead">De warmtewisselaar vangt de warmte op die vrijkomt bij het composteren en draagt die via lucht → water over aan uw gebouw. Eén systeem levert <strong>30 tot 45 kW warmte</strong>, terwijl het zelf <strong>maximaal 1 kW stroom</strong> verbruikt — een continue warmtebron zonder gasaansluiting en zonder zware stroomaansluiting.</p>
+          <p class="case-lead">De warmtewisselaar vangt de warmte op die vrijkomt bij het composteren en draagt die via lucht → water over aan uw gebouw. Eén systeem levert <strong>30 tot 45 kW warmte</strong>, terwijl het zelf <strong>maximaal 1 kW stroom</strong> verbruikt. Een continue warmtebron zonder gasaansluiting en zonder zware stroomaansluiting.</p>
           <ul class="case-bullets">
             <li>Levert 30 tot 45 kW warmte per systeem</li>
             <li>Verbruikt zelf maximaal 1 kW stroom</li>
-            <li>Continue warmte, het hele jaar door — composteringswarmte omgezet in warm water</li>
+            <li>Continue warmte, het hele jaar door: composteringswarmte omgezet in warm water</li>
             <li>Geen gas of zware netaansluiting nodig</li>
           </ul>
           <a href="index.html#contact" class="btn btn-primary case-contact">Plan een gesprek</a>
@@ -190,11 +241,12 @@
         <div class="case-content">
           <p class="eyebrow">Onderdeel</p>
           <h3 class="case-title" id="modal-tech-regeling-title">Op afstand bewaakt en bijgestuurd</h3>
-          <p class="case-lead">De regeling bewaakt temperatuur en proces automatisch en stuurt op afstand bij waar nodig. Zo draait het systeem stabiel met minimale aandacht, en kunt u de cyclus instellen van twee weken tot meerdere maanden, afgestemd op uw reststromen en warmtevraag. De elektrische installatie is bovendien <strong>SCOPE 10-gekeurd op brandveiligheid</strong>.</p>
+          <p class="case-lead">De regeling bewaakt temperatuur en proces automatisch en stuurt op afstand bij waar nodig. Zo draait het systeem stabiel met minimale aandacht, en kunt u de cyclus instellen van een maand tot zes maanden, afgestemd op uw reststromen en warmtevraag. De elektrische installatie is bovendien <strong>SCOPE 10-gekeurd op brandveiligheid</strong>.</p>
           <ul class="case-bullets">
             <li>Automatisch bewaakt en bijgestuurd</li>
+            <li>Geen dagelijkse controle, geen vaste bediener</li>
             <li>Op afstand aanstuurbaar</li>
-            <li>Instelbare cyclus (twee weken tot maanden)</li>
+            <li>Instelbare cyclus (een tot zes maanden)</li>
             <li>SCOPE 10-keurmerk voor brandveiligheid</li>
             <li>Stabiel en betrouwbaar</li>
           </ul>
@@ -233,19 +285,31 @@
         <a href="index.html#systeem">Het systeem</a>
         <a href="index.html#voor-wie">Voor wie</a>
         <a href="index.html#faq">FAQ</a>
-        <a href="index.html#contact">Contact</a>
+                <a href="index.html#contact">Contact</a>
+        <a href="privacy.html">Privacy</a>
       </nav>
     </div>
+    <!-- Subsidieverantwoording: het EU-embleem en deze zin zijn doorgaans verplicht
+         zolang het project loopt. Staat op elke pagina, dus altijd vindbaar. -->
+    <div class="container footer-eu">
+      <div class="footer-eu-badge">
+        <img src="assets/logos/funded-by-eu.png" alt="Funded by the European Union" loading="lazy" />
+      </div>
+      <p>Dit project wordt mede mogelijk gemaakt door het Europees Landbouwfonds voor
+         Plattelandsontwikkeling: Europa investeert in zijn platteland. Samen werken we aan
+         duurzame energie uit compost en circulaire landbouwpraktijken.</p>
+    </div>
+
     <div class="container footer-bottom">
       <span>© <span id="year">2026</span> Thermal Compost Systems. Alle rechten voorbehouden.</span>
-      <span class="footer-made">Verplaatsbaar · Modulair · Circulair</span>
+      <span class="footer-legal">Thermal Compost Systems is een handelsnaam van Thermal Compost Solutions · Maliesingel 63, 3581 BS Utrecht · KvK 94055068</span>
     </div>
   </footer>
 
-  <script src="script.js?v=17" defer></script>
+  <script src="script.js?v=92" defer></script>
   <script type="importmap">
   {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
   </script>
-  <script type="module" src="scene-model.js?v=9"></script>
+  <script type="module" src="scene-model.js?v=12"></script>
 </body>
 </html>

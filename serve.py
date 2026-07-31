@@ -5,10 +5,12 @@ headers (so refreshes always load the latest HTML/CSS/JS during development).
 Avoids `python -m http.server` which calls os.getcwd() at startup
 (blocked in some sandboxed environments)."""
 import http.server
+import os
 import socketserver
 
 DIRECTORY = "/Users/joukenabuurs/Documents/Claude coding"
-PORT = 8123
+# Poort komt uit de omgeving (door de preview-tool toegewezen); 8123 als je 'm zelf start.
+PORT = int(os.environ.get("PORT", "8123"))
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
