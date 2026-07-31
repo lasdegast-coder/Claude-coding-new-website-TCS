@@ -368,6 +368,7 @@
   const tlFoto = document.getElementById("tl-foto");
   const tlTekst = document.getElementById("tl-tekst");
   const tlBijschrift = document.getElementById("tl-bijschrift");
+  const tlPunten = document.getElementById("tl-punten");
   if (tlKnoppen.length && tlFoto && tlTekst && tlBijschrift) {
     tlKnoppen.forEach((knop) => {
       knop.addEventListener("click", () => {
@@ -379,6 +380,17 @@
         tlFoto.src = knop.dataset.foto;
         tlFoto.alt = knop.dataset.alt;
         tlTekst.textContent = knop.dataset.tekst;
+        // optionele opsomming, alleen tonen als die er is voor dit tabblad
+        if (tlPunten) {
+          const punten = (knop.dataset.punten || "").split("|").filter(Boolean);
+          tlPunten.innerHTML = "";
+          punten.forEach((tekst) => {
+            const li = document.createElement("li");
+            li.textContent = tekst;
+            tlPunten.appendChild(li);
+          });
+          tlPunten.hidden = punten.length === 0;
+        }
         tlBijschrift.textContent = knop.dataset.bij;
       });
     });

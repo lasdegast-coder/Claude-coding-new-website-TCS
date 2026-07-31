@@ -24,10 +24,14 @@
   const COVERAGE_MIN = 0.85;
 
   // CO₂: koolstof die in de compost wordt vastgelegd in plaats van te vervluchtigen.
-  // systemen × maanden × m³/maand × kg/m³ × C-gehalte × C niet verdampt × C→CO₂
+  // m³ × kg/m³ nat × droge stof × C-gehalte van die droge stof × C niet verdampt × C→CO₂
+  // Het gewicht per kuub is nat gewogen en verse mest of groenafval bestaat grotendeels
+  // uit water. Het koolstofgehalte geldt voor de droge stof, dus daar moet eerst voor
+  // gecorrigeerd worden. Zonder die stap komt de uitkomst ruim drie keer te hoog uit.
   const HOURS_PER_YEAR = 8760;
-  const KG_PER_M3   = 700;   // gewicht reststroom per kuub
-  const C_SHARE     = 0.5;   // koolstofgehalte
+  const KG_PER_M3   = 700;   // gewicht reststroom per kuub, nat gewogen
+  const DRY_SHARE   = 0.30;  // deel droge stof in dat natte gewicht (de rest is water)
+  const C_SHARE     = 0.5;   // koolstofgehalte van de DROGE stof
   const C_RETAINED  = 0.67;  // deel koolstof dat niet vervluchtigt
   const C_TO_CO2    = 3.67;  // koolstof → CO₂ (44/12)
 
@@ -115,6 +119,11 @@
       modulesFromFeed = volume < MIN_M3 ? 0 : Math.floor(volume / M3_PER_MODULE) + 1;
     }
     const modules = Math.max(0, Math.min(modulesForDemand, modulesFromFeed));
+    // Welke van de twee grenzen knelt? Zonder dat te tonen lijkt de rekenhulp
+    // stuk: meer reststroom invullen verandert dan niets zichtbaars.
+    const grens = modules < 1 ? null
+      : (modulesFromFeed < modulesForDemand ? 'reststroom'
+        : (modulesForDemand < modulesFromFeed ? 'warmtevraag' : null));
 
     const heatCovered = Math.min(modules * heatPerModule, heatDemand);
 
@@ -149,7 +158,7 @@
 
     // CO₂ — koolstof die in de compost vastgelegd blijft i.p.v. te vervluchtigen,
     // berekend over het materiaal dat er werkelijk doorheen gaat
-    const co2Net = processedM3 * KG_PER_M3 * C_SHARE * C_RETAINED * C_TO_CO2;
+    const co2Net = processedM3 * KG_PER_M3 * DRY_SHARE * C_SHARE * C_RETAINED * C_TO_CO2;
 
     const dekking = heatDemand > 0 ? heatCovered / heatDemand : 0;
 
@@ -157,7 +166,7 @@
       s, type, hasFeed, energy, energyLabel, modules,
       vermedenEnergie, verwerkingLine, aanvoerLine, compostValue, ownElec, onderhoud,
       jaarBesparing, investering, payback, naLevensduur, lifetime, co2Net,
-      heatDemand, volume, minM3: MIN_M3,
+      heatDemand, volume, minM3: MIN_M3, grens,
       dekking, perModule: modulePrice + installCost,
       processedM3, feedDekking: hasFeed && volume > 0 ? Math.min(1, processedM3 / volume) : 0,
     };
@@ -191,6 +200,9 @@
     // en laten zien welk deel van de warmtevraag er gedekt wordt.
     const perStuk = r.modules > 1
       ? `<span class="roi-sub">${r.modules} × ${euro(r.perModule)}</span>` : '';
+    // laat zien welke van de twee grenzen het aantal bepaalt
+    const grensTxt = r.grens
+      ? `<span class="roi-sub">begrensd door uw ${r.grens}</span>` : '';
     // Elke opbrengstregel die tegen een capaciteitsgrens aanloopt legt zichzelf uit.
     // Regels die de volle vraag dekken blijven schoon.
     const dekPct = Math.round(r.dekking * 100);
@@ -226,7 +238,7 @@
       <dl class="roi-sec">
         <div><dt>Totale investering</dt><dd>${euro(r.investering)}${perStuk}</dd></div>
         <div><dt>Resultaat na ${r.lifetime} jaar</dt><dd>${signed(r.naLevensduur)}</dd></div>
-        <div><dt>Aanbevolen modules</dt><dd>${r.modules}</dd></div>
+        <div><dt>Aanbevolen modules</dt><dd>${r.modules}${grensTxt}</dd></div>
         <div><dt>Vermeden CO₂</dt><dd>${nl1.format(Math.max(0, r.co2Net) / 1000)} ton/jr</dd></div>
       </dl>
       <p class="roi-note">Indicatie op basis van uw invoer en de getoonde aannames. Subsidie (SDE++/ISDE) is <strong>niet</strong> meegerekend en kan de terugverdientijd verder verkorten.${restNote}${onzeker ? ' De exacte warmteopbrengst van deze reststroom stellen we samen met u vast.' : ''}</p>

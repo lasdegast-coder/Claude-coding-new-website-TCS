@@ -42,3 +42,10 @@
 /compost /
 /blower-esam-tecno-jet-1/
 /snippets/
+
+# Ruw beeld- en videomateriaal in de hoofdmap
+/*.MOV
+/*.mov
+/*.heic
+/*.HEIC
+/*.MP4
