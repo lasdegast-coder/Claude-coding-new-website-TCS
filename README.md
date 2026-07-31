@@ -78,3 +78,17 @@ De LinkedIn-links staan nog op `#` — vul per teamlid de juiste URL in.
 
 > De originele (zware) foto's staan nog los in de hoofdmap; die kun je verwijderen —
 > geoptimaliseerde versies staan in `assets/photos/`.
+
+## Voor de lancering
+
+Afvinken voordat de site op thermalcompostsystems.nl live gaat:
+
+- [ ] **`robots.txt` openzetten.** Staat nu op `Disallow: /` zodat de reviewversie niet in
+      Google komt. Vervang dat door `Allow: /`. Zonder deze stap wordt de site nooit gevonden.
+- [ ] **Contactformulier aansluiten.** Het Apps Script publiceren volgens
+      `formulier-backend/INSTRUCTIES.md` en de web-app-URL invullen bij `ENDPOINT` in `script.js`.
+      Zolang die leeg is, toont het formulier de mailoptie in plaats van te versturen.
+- [ ] **Invulplekken weghalen.** Zoek op `class="ph"`: de quote van Bob Duindam
+      (praktijkvoorbeelden/landgoed.html), de compostanalyse (compost.html) en de functie
+      van Marco (team.html).
+- [ ] **`sitemap.xml` bijwerken** als er pagina's bij zijn gekomen.
