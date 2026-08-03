@@ -7,6 +7,40 @@
 
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* Taal van de pagina, zodat dit bestand zowel de Nederlandse als de Engelse
+     site bedient. Zie ook roi.js. */
+  const LANG = (document.documentElement.lang || "nl").toLowerCase().startsWith("en") ? "en" : "nl";
+  const S = {
+    nl: {
+      menuOpen: "Menu openen", menuDicht: "Menu sluiten",
+      berekeningMee: "Uw berekening wordt meegestuurd: ",
+      berekeningMeeKaal: "Uw ingevulde gegevens uit de rekenhulp worden meegestuurd.",
+      verplicht: "Dit veld is verplicht.",
+      geldigMail: "Vul een geldig e-mailadres in.",
+      mNaam: "Naam: ", mBedrijf: "Bedrijf: ", mMail: "E-mail: ",
+      mTelefoon: "Telefoon: ", mSegment: "Segment: ",
+      mGeenBericht: "(geen bericht)", mBerekening: "Berekening:",
+      mOnderwerp: "Aanvraag via de website",
+      misluktTekst: "Het verzenden lukte niet. Probeer het nog een keer, of stuur uw aanvraag rechtstreeks per mail. ",
+      misluktLink: "Mail ons met deze gegevens",
+      onderweg: "Uw aanvraag is onderweg. De bevestigingsmail kan een minuutje op zich laten wachten.",
+    },
+    en: {
+      menuOpen: "Open menu", menuDicht: "Close menu",
+      berekeningMee: "Your calculation will be included: ",
+      berekeningMeeKaal: "The details you entered in the calculator will be included.",
+      verplicht: "This field is required.",
+      geldigMail: "Enter a valid email address.",
+      mNaam: "Name: ", mBedrijf: "Company: ", mMail: "Email: ",
+      mTelefoon: "Phone: ", mSegment: "Segment: ",
+      mGeenBericht: "(no message)", mBerekening: "Calculation:",
+      mOnderwerp: "Enquiry via the website",
+      misluktTekst: "Sending failed. Please try again, or send your enquiry directly by email. ",
+      misluktLink: "Email us with these details",
+      onderweg: "Your enquiry is on its way. The confirmation email may take a minute to arrive.",
+    },
+  }[LANG];
+
   /* ---------- Footer year ---------- */
   const yearEl = document.getElementById("year");
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
@@ -25,7 +59,7 @@
   const menu = document.getElementById("mobile-menu");
   const setMenu = (open) => {
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.setAttribute("aria-label", open ? "Menu sluiten" : "Menu openen");
+    toggle.setAttribute("aria-label", open ? S.menuDicht : S.menuOpen);
     menu.hidden = !open;
   };
   if (toggle && menu) {
@@ -132,10 +166,11 @@
   /* ---------- Contact form validation + submit feedback ---------- */
   const form = document.querySelector(".contact-form");
   if (form) {
+
     /* Web-app-URL van het Apps Script in de Workspace van Thermal Compost Systems.
        Zie formulier-backend/INSTRUCTIES.md. Zolang deze leeg is, toont het
        formulier de mailoptie in plaats van te doen alsof het verstuurd is. */
-    const ENDPOINT = "";
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbxhTvNQvn6Fb_rZ1_KQbi-C3UQnRm4OZm7CK1mJK4h4WTwVBubLOeFTCoyw26lFjx4kiA/exec";
 
     const CONTACTMAIL = "Contact@thermalcompostsystems.nl";
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -152,12 +187,12 @@
       berekeningRegel.innerHTML = vinkje + '<span class="fb-tekst"></span>';
       const span = berekeningRegel.querySelector(".fb-tekst");
       if (b.kort) {
-        span.textContent = "Uw berekening wordt meegestuurd: ";
+        span.textContent = S.berekeningMee;
         const sterk = document.createElement("strong");
         sterk.textContent = b.kort;
         span.appendChild(sterk);
       } else {
-        span.textContent = "Uw ingevulde gegevens uit de rekenhulp worden meegestuurd.";
+        span.textContent = S.berekeningMeeKaal;
       }
       berekeningRegel.hidden = false;
     };
@@ -174,8 +209,8 @@
       if (errEl) errEl.textContent = msg || "";
     };
     const validateField = (input) => {
-      if (input.hasAttribute("required") && !input.value.trim()) { setError(input, "Dit veld is verplicht."); return false; }
-      if (input.type === "email" && input.value && !emailRe.test(input.value.trim())) { setError(input, "Vul een geldig e-mailadres in."); return false; }
+      if (input.hasAttribute("required") && !input.value.trim()) { setError(input, S.verplicht); return false; }
+      if (input.type === "email" && input.value && !emailRe.test(input.value.trim())) { setError(input, S.geldigMail); return false; }
       setError(input, "");
       return true;
     };
@@ -203,6 +238,9 @@
       const veld = (id) => { const el = form.querySelector("#" + id); return el ? el.value.trim() : ""; };
 
       toonBerekening();
+      // De rekenhulp levert naast de leesbare tekst ook de losse velden en uitkomsten.
+      // Daarmee kan het Apps Script er kolommen van maken in plaats van één tekstblok.
+      const b = window.tcsBerekening ? window.tcsBerekening() : null;
       const gegevens = {
         naam: veld("naam"),
         bedrijf: veld("bedrijf"),
@@ -211,20 +249,44 @@
         segment: veld("segment"),
         bericht: veld("bericht"),
         berekening: veld("berekening"),
+        rekenvelden: b ? b.velden : [],
+        rekenuitkomst: b ? b.uitkomst : null,
+        taal: document.documentElement.lang || "nl",
         website: veld("website"), // spamval
       };
 
-      const klaar = () => { btn.classList.remove("loading"); btn.disabled = false; };
+      /* Google zet het formulierscript in de slaapstand als het een tijd niet is
+         gebruikt. De eerste aanvraag daarna kan tientallen seconden duren, terwijl
+         hij allang bij Google ligt. Loopt het verzoek na acht seconden nog zonder
+         fout, dan is het onderweg en bedanken we de bezoeker alvast. Mislukt het
+         in die eerste acht seconden, en daar mislukt het vrijwel altijd omdat een
+         verbindingsfout meteen komt, dan ziet hij gewoon de foutmelding. */
+      let optimistTimer = null;
 
-      const gelukt = () => {
+      const klaar = () => {
+        btn.classList.remove("loading");
+        btn.disabled = false;
+        if (optimistTimer) { clearTimeout(optimistTimer); optimistTimer = null; }
+      };
+
+      // onderweg = we hebben nog geen antwoord van Google, maar het verzoek is vertrokken
+      let alBedankt = false;
+      const gelukt = (onderweg) => {
+        if (alBedankt) return;
+        alBedankt = true;
         klaar();
         form.reset();
         toonBerekening();
         if (foutBlok) foutBlok.hidden = true;
         if (success) {
+          const extra = success.querySelector(".form-success-extra");
+          if (extra) {
+            extra.textContent = onderweg ? S.onderweg : "";
+            extra.hidden = !onderweg;
+          }
           success.hidden = false;
           success.scrollIntoView({ behavior: prefersReduced ? "auto" : "smooth", block: "center" });
-          setTimeout(() => { success.hidden = true; }, 8000);
+          setTimeout(() => { success.hidden = true; }, onderweg ? 14000 : 8000);
         }
       };
 
@@ -232,26 +294,29 @@
       // de mailknop bevat alles wat hij zojuist heeft ingevuld.
       const mislukt = () => {
         klaar();
+        // hadden we al bedankt op grond van "onderweg", dan halen we dat weer weg:
+        // de gegevens zijn dan alsnog niet aangekomen en dat moet de bezoeker weten
+        if (success) success.hidden = true;
         if (!foutBlok) return;
         const regels = [
-          "Naam: " + gegevens.naam,
-          "Bedrijf: " + gegevens.bedrijf,
-          "E-mail: " + gegevens.email,
-          "Telefoon: " + (gegevens.telefoon || "-"),
-          "Segment: " + (gegevens.segment || "-"),
+          S.mNaam + gegevens.naam,
+          S.mBedrijf + gegevens.bedrijf,
+          S.mMail + gegevens.email,
+          S.mTelefoon + (gegevens.telefoon || "-"),
+          S.mSegment + (gegevens.segment || "-"),
           "",
-          gegevens.bericht || "(geen bericht)",
+          gegevens.bericht || S.mGeenBericht,
         ];
-        if (gegevens.berekening) regels.push("", "Berekening:", gegevens.berekening);
+        if (gegevens.berekening) regels.push("", S.mBerekening, gegevens.berekening);
         const link = "mailto:" + CONTACTMAIL
-          + "?subject=" + encodeURIComponent("Aanvraag via de website")
+          + "?subject=" + encodeURIComponent(S.mOnderwerp)
           + "&body=" + encodeURIComponent(regels.join("\n"));
         foutBlok.innerHTML = "";
         const p = document.createElement("p");
-        p.textContent = "Het verzenden lukte niet. Probeer het nog een keer, of stuur uw aanvraag rechtstreeks per mail. ";
+        p.textContent = S.misluktTekst;
         const a = document.createElement("a");
         a.href = link;
-        a.textContent = "Mail ons met deze gegevens";
+        a.textContent = S.misluktLink;
         p.appendChild(a);
         foutBlok.appendChild(p);
         foutBlok.hidden = false;
@@ -263,6 +328,8 @@
       if (foutBlok) foutBlok.hidden = true;
 
       if (!ENDPOINT) { mislukt(); return; }
+
+      optimistTimer = setTimeout(() => gelukt(true), 8000);
 
       // text/plain voorkomt een preflight-verzoek, dat Apps Script niet beantwoordt
       fetch(ENDPOINT, {

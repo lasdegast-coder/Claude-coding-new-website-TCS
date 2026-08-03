@@ -1,9 +1,4 @@
-# LET OP: dit blokkeert alle zoekmachines. Zo hoort het zolang de site in review is.
-# BIJ LIVEGANG deze twee regels vervangen door:
-#   Allow: /
-# en de sitemapregel laten staan. Zie README.md, onderdeel "Voor de lancering".
-
 User-agent: *
-Disallow: /
+Allow: /
 
 Sitemap: https://thermalcompostsystems.nl/sitemap.xml

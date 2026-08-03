@@ -1174,19 +1174,23 @@ a.partner-logo:hover { opacity: .7; }
 .tech-col--right { grid-area: right; }
 .tech-col .component { padding: var(--sp-4); }
 .tech-col .component p { font-size: .9rem; }
-.tech-photo { grid-area: photo; aspect-ratio: auto; height: 100%; align-self: stretch; }
-@media (max-width: 920px) {
+/* De foto is even hoog als de twee kaarten ernaast en houdt zijn staande 4:5 formaat.
+   De breedte volgt uit die hoogte, gecentreerd in de middenkolom. Is de kolom smaller dan
+   dat, dan valt er hooguit een randje links en rechts af in plaats van het halve beeld. */
+.tech-photo { grid-area: photo; aspect-ratio: 4 / 5; width: min(100%, 560px); height: auto;
+  justify-self: center; align-self: center; }
+@media (max-width: 1099px) {
   .tech-layout {
     grid-template-columns: 1fr 1fr;
     grid-template-areas: "photo photo" "left right";
     width: auto; margin-left: 0; gap: var(--sp-4);
   }
-  .tech-photo { aspect-ratio: 16 / 9; height: auto; margin-bottom: var(--sp-2); }
+  .tech-photo { height: auto; width: 100%; max-width: 420px;
+    margin: 0 auto var(--sp-2); align-self: auto; }
 }
 @media (max-width: 560px) {
   .tech-layout { grid-template-columns: 1fr; grid-template-areas: "photo" "left" "right"; }
   .tech-col { grid-template-rows: auto auto; }
-  .tech-photo { aspect-ratio: 3 / 2; }
 }
 .component {
   display: flex; flex-direction: column; text-align: left; width: 100%;
@@ -1486,3 +1490,39 @@ a.partner-logo:hover { opacity: .7; }
 .partner-logo--groot { padding: 10px 10px; }
 .partner-logo--groot img { max-height: 72px; }
 .partner-logo--klein img { max-height: 40px; }
+
+/* ---------- Taalknop ----------
+   Platte tekst in de stijl van de menulinks: de huidige taal in de normale kleur,
+   de andere gedempt, met een schuine streep ertussen. Geen pil eromheen, zodat hij
+   niet met de gesprek-knop ernaast concurreert. */
+.lang-switch {
+  display: inline-flex; align-items: center;
+  font-size: .8rem; font-weight: 600; letter-spacing: .02em;
+}
+.lang-switch > * {
+  padding: 10px 3px;
+  text-decoration: none;
+  transition: color var(--dur) var(--ease-out);
+}
+.lang-switch .lang-actief { color: var(--forest-800); }
+.lang-switch a { color: var(--forest-800); opacity: .45; }
+.lang-switch a:hover, .lang-switch a:focus-visible { opacity: 1; }
+/* de streep hoort bij het tweede deel, welke taal daar ook staat */
+.lang-switch > * + *::before {
+  content: "/";
+  margin-right: 5px;
+  color: var(--forest-800); opacity: .3;
+  font-weight: 400;
+}
+.nav-inner .lang-switch { margin-left: 10px; }
+.mobile-menu .lang-switch { align-self: flex-start; margin-top: 8px; }
+/* Onder 880px vallen de menulinks en de gesprek-knop weg. Zonder deze regel
+   schuift de taalknop naar de logo-kant in plaats van naast het menu-icoon. */
+@media (max-width: 880px) { .nav-inner .lang-switch { margin-left: auto; } }
+
+/* Extra regel in het bedankblok als Google nog niet heeft geantwoord, zie script.js */
+.form-success-extra {
+  display: block; width: 100%;
+  margin-top: 6px; font-size: .88rem; line-height: 1.5;
+  opacity: .8; font-weight: 400;
+}

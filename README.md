@@ -79,16 +79,30 @@ De LinkedIn-links staan nog op `#` — vul per teamlid de juiste URL in.
 > De originele (zware) foto's staan nog los in de hoofdmap; die kun je verwijderen —
 > geoptimaliseerde versies staan in `assets/photos/`.
 
+## Engelse versie
+
+De Engelse site staat in `en/`, met Engelse bestandsnamen (`system.html`, `news.html`,
+`about.html`, `case-studies/…`). De taalknop rechtsboven springt naar dezelfde pagina in
+de andere taal. Welke pagina bij welke hoort staat in `vertaling/en_shell.py` en
+in de `<link rel="alternate" hreflang>` regels bovenaan elke pagina.
+
+`roi.js` en `script.js` bedienen beide talen vanuit één bestand. Ze lezen `<html lang>`
+en pakken de bijbehorende teksten uit de tabel bovenin. Een tekst toevoegen betekent dus
+een regel in `T` (roi.js) of `S` (script.js), in beide talen.
+
+Let op bij het wijzigen van een tekst: doe het op de Nederlandse pagina **en** op de
+Engelse tegenhanger. Ze staan los van elkaar.
+
 ## Voor de lancering
 
 Afvinken voordat de site op thermalcompostsystems.nl live gaat:
 
-- [ ] **`robots.txt` openzetten.** Staat nu op `Disallow: /` zodat de reviewversie niet in
-      Google komt. Vervang dat door `Allow: /`. Zonder deze stap wordt de site nooit gevonden.
-- [ ] **Contactformulier aansluiten.** Het Apps Script publiceren volgens
-      `formulier-backend/INSTRUCTIES.md` en de web-app-URL invullen bij `ENDPOINT` in `script.js`.
-      Zolang die leeg is, toont het formulier de mailoptie in plaats van te versturen.
-- [ ] **Invulplekken weghalen.** Zoek op `class="ph"`: de quote van Bob Duindam
-      (praktijkvoorbeelden/landgoed.html), de compostanalyse (compost.html) en de functie
-      van Marco (team.html).
-- [ ] **`sitemap.xml` bijwerken** als er pagina's bij zijn gekomen.
+- [x] **`robots.txt` openzetten.** Staat op `Allow: /`, zoekmachines mogen de site indexeren.
+- [x] **Contactformulier aangesloten.** Het Apps Script draait in de eigen Workspace en de
+      web-app-URL staat in `ENDPOINT` in `script.js`. Getest op 3 augustus 2026: aanvraag,
+      bevestiging aan de aanvrager en een regel in het blad kwamen alle drie binnen.
+      Let op: na een lange stille periode kan de eerste aanvraag tot een halve minuut duren
+      omdat Google het script dan opnieuw moet opstarten. Daarna is het een paar seconden.
+- [x] **Invulplekken weghalen.** Alle plekken met `class="ph"` zijn weg. De quote van
+      Bob Duindam is helemaal uit landgoed.html verwijderd.
+- [x] **`sitemap.xml` bijwerken.** Bevat nu alle 18 paginas, Nederlands en Engels.
