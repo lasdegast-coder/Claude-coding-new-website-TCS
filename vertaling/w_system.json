@@ -20,8 +20,6 @@
   "De regeling en techniek in de machinekant": "The control system and technology in the machine section",
   "De container met alle techniek aan boord": "The container with all the technology on board",
   "Maximale composteerruimte in 30 m²": "Maximum composting space in 30 m²",
-  "De volledige container is composteerruimte, met een grote verwerkingscapaciteit op slechts 30 m². Onder gecontroleerde omstandigheden (temperatuur, vocht en lucht) verloopt het proces gelijkmatig, wat zorgt voor een stabiele warmteproductie én hoogwaardige compost.": "The whole container is composting space, with a large processing capacity on just 30 m². Under controlled conditions of temperature, moisture and air the process runs evenly, which gives both steady heat production and high-grade compost.",
-  "Grote capaciteit op een klein oppervlak (30 m²)": "Large capacity on a small footprint of 30 m²",
   "Gecontroleerde omstandigheden → gelijkmatig proces": "Controlled conditions, so an even process",
   "Instelbare cyclus (een tot zes maanden)": "Adjustable cycle of one to six months",
   "Warmte oogsten die anders verloren gaat": "Harvesting heat that would otherwise be lost",
@@ -58,7 +56,9 @@
   "Benieuwd wat het systeem voor u oplevert?": "Curious what the system would deliver for you?",
   "We denken graag met u mee over uw warmtevraag en beschikbare reststromen. Vrijblijvend.": "We are glad to think along with you about your heat demand and the residual streams you have. No obligation.",
   "Nathan van den Dool bij de geopende compostcontainer": "Nathan van den Dool beside the opened compost container",
-  "Het systeem": "The system"
+  "Het systeem": "The system",
+  "De volledige container is composteerruimte. Er gaat 55 m³ organisch materiaal in per cyclus, op een grondvlak van slechts 30 m². Onder gecontroleerde omstandigheden (temperatuur, vocht en lucht) verloopt het proces gelijkmatig, wat zorgt voor een stabiele warmteproductie én hoogwaardige compost.": "The whole container is composting space. It takes 55 m³ of organic material per cycle, on a footprint of just 30 m². Under controlled conditions of temperature, moisture and air the process runs evenly, which gives both steady heat production and high-grade compost.",
+  "55 m³ per cyclus op 30 m² grondvlak": "55 m³ per cycle on a 30 m² footprint"
  },
  "titel": "The system | Thermal Compost Systems",
  "omschrijving": "How the compost heating system works: one movable 40ft container that turns organic waste into heat and high-grade compost."
