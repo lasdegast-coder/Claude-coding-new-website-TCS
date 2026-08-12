@@ -362,6 +362,9 @@ textarea:focus-visible {
   z-index: 1;
 }
 .hero-scroll svg { animation: bob 1.8s var(--ease-in-out) infinite; }
+/* Op telefoon staat de hero rechtop en komt het icoontje over de opsomming heen.
+   Daar is het ook overbodig, want scrollen spreekt daar vanzelf. */
+@media (max-width: 880px) { .hero-scroll { display: none; } }
 @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 
 /* Hero illustration animations */
@@ -1526,3 +1529,14 @@ a.partner-logo:hover { opacity: .7; }
   margin-top: 6px; font-size: .88rem; line-height: 1.5;
   opacity: .8; font-weight: 400;
 }
+
+/* Terugzetknop in het aannameblok van de rekenhulp, zie roi.js */
+.roi-reset {
+  display: block; margin: var(--sp-3) 0 0 auto;
+  background: none; border: 0; padding: 6px 2px;
+  font: inherit; font-size: .85rem; font-weight: 600;
+  color: var(--forest-600); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+  transition: color var(--dur) var(--ease-out);
+}
+.roi-reset:hover, .roi-reset:focus-visible { color: var(--ember-600, var(--forest-800)); }

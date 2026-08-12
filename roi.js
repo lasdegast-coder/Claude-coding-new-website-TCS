@@ -61,6 +61,7 @@
       note: 'Indicatie op basis van uw invoer en de getoonde aannames. Subsidie (SDE++/ISDE) is <strong>niet</strong> meegerekend en kan de terugverdientijd verder verkorten.',
       noteOnzeker: ' De exacte warmteopbrengst van deze reststroom stellen we samen met u vast.',
       cta: 'Plan een gesprek over uw berekening',
+      reset: 'Herstel standaardwaarden',
       bSituatie: 'Situatie:', bVerwarmt: 'Verwarmt nu met:', bVerbruik: 'Verbruik:',
       bRest: 'Eigen reststromen:', bHoeveel: 'Hoeveelheid:', bProc: 'Verwerkingskosten:',
       bAangepast: 'Zelf aangepaste aannames:', bStandaard: 'standaard',
@@ -92,6 +93,7 @@
       note: 'An indication based on your input and the assumptions shown. Subsidy (SDE++/ISDE) is <strong>not</strong> included and can shorten the payback period further.',
       noteOnzeker: ' We establish the exact heat yield of this residual stream together with you.',
       cta: 'Book a call about your calculation',
+      reset: 'Restore default values',
       bSituatie: 'Situation:', bVerwarmt: 'Currently heating with:', bVerbruik: 'Consumption:',
       bRest: 'Own residual streams:', bHoeveel: 'Amount:', bProc: 'Processing costs:',
       bAangepast: 'Assumptions you changed:', bStandaard: 'default',
@@ -242,9 +244,37 @@
     };
   }
 
+  /* De standaardwaarde van een aanname. De warmte per module is de uitzondering:
+     die vult het formulier zelf in op basis van het gekozen segment. */
+  const standaardVan = (el) => (el.id === 'a-kw'
+    ? String(KW_PER_SEG[seg()] || el.defaultValue)
+    : el.defaultValue);
+
+  /* Terugzetknop: alleen zichtbaar zodra de bezoeker echt iets heeft veranderd,
+     zodat hij niet in de weg staat bij wie de aannames laat staan. */
+  const resetKnop = document.querySelector('.roi-reset');
+  if (resetKnop) {
+    resetKnop.textContent = T.reset;
+    resetKnop.addEventListener('click', () => {
+      form.querySelectorAll('.roi-assumptions input').forEach((el) => {
+        el.value = standaardVan(el);
+      });
+      kwTouched = false;
+      render();
+      resetKnop.blur();
+    });
+  }
+  const toonReset = () => {
+    if (!resetKnop) return;
+    const anders = [...form.querySelectorAll('.roi-assumptions input')]
+      .some((el) => el.value !== standaardVan(el));
+    resetKnop.hidden = !anders;
+  };
+
   // ---- weergave ----
   function render() {
     sync();
+    toonReset();
     const r = calc();
 
     // Alleen bij 'overig organisch materiaal' is de warmteopbrengst echt onbekend,
@@ -410,9 +440,7 @@
         // De warmte per module vult het formulier zelf in op basis van het gekozen
         // segment. Daar is de standaard dus niet de waarde uit de HTML maar die
         // segmentwaarde, anders lijkt het alsof de bezoeker hem heeft aangepast.
-        const standaard = el.id === 'a-kw'
-          ? String(KW_PER_SEG[seg()] || el.defaultValue)
-          : el.defaultValue;
+        const standaard = standaardVan(el);
         uit.push({
           label: labelVan(el),
           waarde: el.value,

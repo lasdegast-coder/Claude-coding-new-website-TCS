@@ -36,15 +36,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" />
 
-  <link rel="stylesheet" href="../styles.css?v=91" />
+  <link rel="stylesheet" href="../styles.css?v=93" />
   <!-- Mark JS as available so reveal-animations only hide content when JS can reveal it -->
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
+  <span id="top" aria-hidden="true"></span>
   <a class="skip-link" href="#main">Skip to main content</a>
 
   <!-- ================= HEADER / NAV ================= -->
-  <header class="site-header" id="top">
+  <header class="site-header">
     <div class="container nav-inner">
       <a class="brand" href="#top" aria-label="Thermal Compost Systems, home">
         <!-- LOGO: verschijnt automatisch zodra assets/logo.png (of .svg) bestaat; anders valt het terug op onderstaande tekst -->
@@ -227,7 +228,7 @@
         <div class="audience-grid">
           <button class="audience-card reveal" data-reveal type="button" data-modal="kassen" aria-haspopup="dialog">
             <div class="audience-media">
-              <img src="../assets/photos/kas.jpg" alt="Strawberry growing in a heated greenhouse" loading="lazy" width="1300" height="867" />
+              <img src="../assets/photos/kas.jpg" alt="Growing in a heated greenhouse" loading="lazy" width="1300" height="867" />
               <span class="audience-tag">Garden centres &amp; greenhouses</span>
             </div>
             <div class="audience-body">
@@ -275,7 +276,7 @@
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
         </button>
         <div class="case-media">
-          <img src="../assets/photos/kas.jpg" alt="Strawberry growing in a heated greenhouse" />
+          <img src="../assets/photos/kas.jpg" alt="Growing in a heated greenhouse" />
           <a class="btn btn-light case-example" href="case-studies/greenhouses.html">
             See this case study
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -468,6 +469,7 @@
                 <label>Electricity price for own use (€/kWh)<input type="number" id="a-elec" value="0.30" min="0" step="0.01"></label>
                 <label>Feedstock supply costs (€/m³)<input type="number" id="a-aanvoer" value="10" min="0"></label>
               </div>
+              <button type="button" class="roi-reset" hidden>Restore default values</button>
             </details>
           </form>
 
@@ -708,6 +710,6 @@
   </footer>
 
   <script src="../script.js?v=99" defer></script>
-  <script src="../roi.js?v=29" defer></script>
+  <script src="../roi.js?v=30" defer></script>
 </body>
 </html>
