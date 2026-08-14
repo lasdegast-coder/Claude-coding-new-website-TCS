@@ -124,6 +124,13 @@
   let kwTouched = false;
   if (kwInput) kwInput.addEventListener('input', () => { kwTouched = true; });
 
+  // Ook het gasverbruik verschilt sterk per segment: een veehouderij stookt een
+  // veelvoud van een tuincentrum. Vult het veld voor, tenzij de bezoeker het zelf aanpast.
+  const GAS_PER_SEG = { vee: 65000, terrein: 25000, kas: 25000 };
+  const gasInput = document.getElementById('roi-gas-m3');
+  let gasTouched = false;
+  if (gasInput) gasInput.addEventListener('input', () => { gasTouched = true; });
+
   // ---- toon/verberg velden op basis van keuzes ----
   function sync() {
     const energy = document.getElementById('roi-energy').value;
@@ -133,6 +140,7 @@
 
     // warmte per module volgt het segment, zolang de bezoeker het veld niet zelf invulde
     if (kwInput && !kwTouched) kwInput.value = KW_PER_SEG[seg()] || 45;
+    if (gasInput && !gasTouched) gasInput.value = GAS_PER_SEG[seg()] || 25000;
 
     const type = document.getElementById('roi-type').value;
     const hasFeed = type !== 'geen';
@@ -246,9 +254,11 @@
 
   /* De standaardwaarde van een aanname. De warmte per module is de uitzondering:
      die vult het formulier zelf in op basis van het gekozen segment. */
-  const standaardVan = (el) => (el.id === 'a-kw'
-    ? String(KW_PER_SEG[seg()] || el.defaultValue)
-    : el.defaultValue);
+  const standaardVan = (el) => {
+    if (el.id === 'a-kw') return String(KW_PER_SEG[seg()] || el.defaultValue);
+    if (el.id === 'roi-gas-m3') return String(GAS_PER_SEG[seg()] || el.defaultValue);
+    return el.defaultValue;
+  };
 
   /* Terugzetknop: alleen zichtbaar zodra de bezoeker echt iets heeft veranderd,
      zodat hij niet in de weg staat bij wie de aannames laat staan. */
