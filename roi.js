@@ -51,6 +51,7 @@
       jaar: ' jaar', nvt: 'n.v.t.',
       grensPre: 'begrensd door uw ', grensFeed: 'reststroom', grensHeat: 'warmtevraag',
       dektHeat: (p) => `dekt ${p}% van uw warmtevraag`,
+      dektHeatVol: 'dekt uw volledige warmtevraag',
       dektFeed: (p) => `dekt ${p}% van uw verwerkingskosten`,
       vermeden: 'Vermeden ', vermedenProc: 'Vermeden verwerkingskosten',
       aanvoer: 'Aanvoerkosten feedstock', compost: 'Compostopbrengst',
@@ -83,6 +84,7 @@
       jaar: ' years', nvt: 'n/a',
       grensPre: 'limited by your ', grensFeed: 'residual material', grensHeat: 'heat demand',
       dektHeat: (p) => `covers ${p}% of your heat demand`,
+      dektHeatVol: 'covers your entire heat demand',
       dektFeed: (p) => `covers ${p}% of your processing costs`,
       vermeden: 'Avoided ', vermedenProc: 'Avoided processing costs',
       aanvoer: 'Feedstock supply costs', compost: 'Compost revenue',
@@ -316,8 +318,10 @@
     // Elke opbrengstregel die tegen een capaciteitsgrens aanloopt legt zichzelf uit.
     // Regels die de volle vraag dekken blijven schoon.
     const dekPct = Math.round(r.dekking * 100);
-    const energieSub = r.dekking > 0 && dekPct < 100
-      ? `<span class="roi-sub">${T.dektHeat(dekPct)}</span>` : '';
+    // Ook bij volledige dekking iets tonen: dat is de beste uitkomst en die
+    // verdient een zin, in plaats van dat er dan juist niets staat.
+    const energieSub = r.dekking > 0
+      ? `<span class="roi-sub">${dekPct >= 100 ? T.dektHeatVol : T.dektHeat(dekPct)}</span>` : '';
     const restNote = '';
 
     const lines = [];
