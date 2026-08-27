@@ -1,18 +1,26 @@
 # Thermal Compost Systems — website
 
-Premium, statische one-page website gericht op **leadgeneratie** (contactformulier).
-Gebouwd met pure HTML/CSS/JS — geen build-stap, geen dependencies. Werkt op elk device.
+Tweetalige statische website gericht op **leadgeneratie** via het contactformulier.
+Pure HTML/CSS/JS, geen build-stap en geen dependencies. Live op thermalcompostsystems.nl
+via GitHub Pages.
 
 ## Bestanden
 ```
-index.html        # alle content & structuur (Nederlands)
-styles.css        # ontwerpsysteem, layout, animaties
-script.js         # scroll-reveals, count-up, menu, FAQ, formvalidatie
-serve.py          # lokale previewserver (alleen voor ontwikkeling)
-assets/
-  README.md       # welke foto's waar staan + hoe vervangen
-  photos/         # geoptimaliseerde web-foto's
-.claude/launch.json
+index.html                # homepage (Nederlands)
+het-systeem.html          # techniek, met het 3D-model
+compost.html              # de compost en wat je erin stuurt
+nieuws.html  team.html  privacy.html
+praktijkvoorbeelden/      # kassen, veehouder, landgoed
+en/                       # de Engelse site, zelfde structuur
+styles.css                # ontwerpsysteem, layout, animaties
+script.js                 # menu, reveals, FAQ, contactformulier (tweetalig)
+roi.js                    # de rekenhulp (tweetalig)
+scene-model.js  model.dae # het draaiende 3D-model
+formulier-backend/        # Apps Script dat het formulier verwerkt
+vertaling/                # scripts waarmee de Engelse pagina's zijn gemaakt
+CNAME  sitemap.xml  robots.txt
+serve.py                  # lokale previewserver, alleen voor ontwikkeling
+assets/photos/            # geoptimaliseerde web-foto's
 ```
 
 ## Lokaal bekijken
@@ -22,10 +30,14 @@ python3 serve.py
 ```
 Of open simpelweg `index.html` in de browser (foto's en fonts laden gewoon).
 
-## Online zetten (hosting)
-Het is een statische site, dus elke statische host werkt — sleep de map naar
-**Netlify Drop**, **Vercel**, **Cloudflare Pages** of zet de bestanden op je eigen webhosting.
-`serve.py`, `.claude/` en de README's hoeven niet mee.
+## Online zetten
+De site staat op **GitHub Pages**, in de repo `Claude-coding-new-website-TCS`. Pushen naar
+`main` is publiceren. Het bestand `CNAME` vertelt GitHub dat de repo op
+thermalcompostsystems.nl hoort te staan, en de DNS wijst al naar GitHub.
+
+Bij het aanpassen van `styles.css`, `script.js`, `roi.js` of `scene-model.js`: hoog het
+`?v=` nummer op in **alle** HTML-bestanden, ook die in `en/` en `praktijkvoorbeelden/`.
+Anders blijven browsers de oude versie gebruiken.
 
 ## Ontwerp
 - **Stijl:** organic/biophilic, premium & zakelijk
@@ -39,9 +51,7 @@ Het is een statische site, dus elke statische host werkt — sleep de map naar
 ## Praktijkvoorbeeld-pagina's
 De map `praktijkvoorbeelden/` bevat drie case-pagina's (`kassen.html`, `veehouder.html`,
 `landgoed.html`), bereikbaar via de knop "Bekijk dit praktijkvoorbeeld" in de modals.
-Alles wat nog ingevuld moet worden, staat **oranje gestippeld** (`.ph`): casenaam,
-resultaat-zin, introductie, de vier kerncijfers, de resultaat-tekst en de klantquote.
-Zoek in de HTML op `class="ph"` om alle in te vullen plekken te vinden.
+Alle content is ingevuld, er staan geen placeholders meer in.
 
 Onder "Het resultaat" staat een **fotogalerij** van drie foto's die uitklappen naar een
 lightbox (klik, met vorige/volgende, Esc/klik-buiten om te sluiten). Standaard staan er drie
@@ -52,32 +62,43 @@ te passen naar een andere foto in `assets/photos/`.
 `team.html` (in de hoofdmap, menu-label **"Over ons"**) is **alleen bereikbaar via de bovenbalk**
 (niet in de footer). Twee delen: (1) een tekst over het bedrijf met een foto ernaast, en (2)
 het team als **beeldtegels**: fotozone boven, donkere balk eronder met
-naam, functie en LinkedIn/e-mail. Namen en functies staan ingevuld; alleen Marco's functie en
-de intro zijn nog `.ph`-placeholder. Een teamlid toevoegen/verwijderen: kopieer of verwijder een
+naam, functie en e-mail. Namen, functies en foto's staan ingevuld. Een teamlid
+toevoegen of verwijderen: kopieer of verwijder een
 `<article class="team-card">`. Een echte foto plaatsen: vervang binnen `.team-photo` het
 `<div class="team-photo--ph">…</div>` door `<img src="assets/photos/team-naam.jpg" alt="Naam" />`.
-De LinkedIn-links staan nog op `#` — vul per teamlid de juiste URL in.
+Persoonlijke LinkedIn-links staan er niet in, alleen die van het bedrijf in de voettekst.
 
-## Nog te doen (placeholders)
-1. **Case-content invullen** — echte cijfers, resultaat-teksten en klantquotes op de drie
-   `praktijkvoorbeelden/*.html` pagina's (alle `.ph`-markeringen). Voeg per case eventueel
-   een echte klantfoto toe voor het quote-blok.
-2. **Formulier koppelen** — `script.js` simuleert nu het versturen. Koppel het aan een
-   echte mailservice (bijv. [Formspree](https://formspree.io), Netlify Forms, of je eigen backend).
-   Zoek in `script.js` op `Simulate async submit`.
-3. **Logo** — ✅ geplaatst (`assets/logo.png`, transparant). Staat in de header op alle pagina's;
-   valt automatisch terug op tekst als het bestand ontbreekt. De footer gebruikt bewust de
-   tekst-versie (donkere achtergrond).
-4. **Teamleden invullen** — namen, functies, foto's en LinkedIn/e-mail op `team.html` (`.ph`-markeringen).
-5. **LinkedIn-URL** invullen (contact + footer + teamkaarten).
-6. **Telefoon/e-mail** verifiëren (overgenomen uit de oude site).
+## Nog open
 
-> Bij het aanpassen van `styles.css` of `script.js`: hoog het `?v=` nummer in de `<link>`/
-> `<script>`-verwijzingen op (in `index.html`, `team.html` én de drie case-pagina's), zodat browsers de
-> nieuwe versie ophalen in plaats van een gecachte.
+De site staat live en werkt. Dit is wat er nog ligt, met wie het kan oplossen.
 
-> De originele (zware) foto's staan nog los in de hoofdmap; die kun je verwijderen —
-> geoptimaliseerde versies staan in `assets/photos/`.
+**Cijfers die we van jullie nodig hebben**
+
+1. **Cyclusduur in de rekenhulp.** De tool rekent met 55 m3 per systeem per maand, dus
+   met een cyclus van precies een maand. Op de techniekpagina staat dat de cyclus
+   instelbaar is van een tot zes maanden, en bij De Boerinn kwamen we uit op ongeveer
+   120 m3 per jaar. Duurt een cyclus in de praktijk langer dan een maand, dan rekent de
+   tool de verwerkingscapaciteit te hoog en adviseert hij te weinig systemen. Zodra de
+   praktijkwaarde bekend is: cyclusduur als aanname toevoegen en de stap van 660 m3
+   gelijktrekken met de werkelijke jaarcapaciteit (nu 495 m3 bij 6570 draaiuren).
+2. **Gewicht van een kuub eindcompost.** De 32 ton CO2 op de veehouderpagina rust op
+   een aanname van 500 kg per m3. Bij 400 kg wordt het 40 ton, bij 600 kg 27 ton.
+3. **Lease-optie in de rekenhulp.** Nodig: prijs per maand, looptijd, of onderhoud
+   erbij zit, en wat er aan het eind van de looptijd gebeurt.
+
+**Aanleveren**
+
+4. **Logo's van de nieuwsbronnen**, als die erbij moeten. Die halen we niet zelf van
+   de sites van die partijen.
+
+**Nalezen**
+
+5. **De Engelse teksten.** Die zijn in een keer geschreven en niet per stuk goedgekeurd.
+   Vooral de homepage en de compostpagina zijn het nalezen waard.
+6. **De cv-leiding.** Op de homepage staat bij Nodig "30 m2 ruimte en een stopcontact",
+   terwijl op de over-ons-pagina staat dat de cv-leiding en een buitenstopcontact de
+   vereiste aansluitingen zijn. Als de cv-aansluiting bij plaatsing hoort en niet iets
+   is wat de klant vooraf moet hebben, klopt het zo. Zo niet, trek die twee gelijk.
 
 ## Engelse versie
 
