@@ -11,7 +11,10 @@ import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js';
    - OrbitControls + auto-rotate; reveal-animatie volgt
    ================================================================= */
 
-const MODEL_URL = 'model.dae';
+/* Paden hangen aan dit script en niet aan de pagina die het laadt. Zonder dit
+   zoekt de Engelse pagina in /en/ naar /en/model.dae, en die bestaat niet. */
+const BASIS = new URL('.', import.meta.url);
+const MODEL_URL = new URL('model.dae', BASIS).href;
 
 const canvas = document.getElementById('scene3d-canvas');
 const track = document.getElementById('scene3d-track');
@@ -337,7 +340,7 @@ function init() {
       const backBaseZ = back.position.z;
 
       // --- logo op de zijwanden ---
-      new THREE.TextureLoader().load('assets/logo-white.png', (tex) => {
+      new THREE.TextureLoader().load(new URL('assets/logo-white.png', BASIS).href, (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         const aspect = (tex.image && tex.image.width / tex.image.height) || 4.18;
         const logoW = 5.4, logoH = logoW / aspect;
