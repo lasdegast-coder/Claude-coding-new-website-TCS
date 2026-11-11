@@ -31,6 +31,10 @@
   const FILL_HOURS = HOURS_PER_YEAR / 6;
   const KWH_PER_FILL = T_DS_FILL * 1000 * F_OS * DEG * MJ_PER_KG / 3.6 * NET;
   const MONTHS_PER_FILL = 2;
+  // Onder deze warmtevraag raden we een systeem af. Daarboven krijgt de klant minstens
+  // één module, ook als die niet al zijn warmte kwijt kan: de reden kan ook biologisch,
+  // circulair of PR zijn.
+  const MIN_GAS_M3 = 3000;
   // Benutte warmte per module per jaar, afgerond op 100 kWh: 92.300 bij 8 stookmaanden, 138.400 bij 12.
   const kwhVoor = (maanden) => Math.round(KWH_PER_FILL * maanden / MONTHS_PER_FILL / 100) * 100;
 
@@ -54,7 +58,7 @@
       gas: 'aardgas', elek: 'elektriciteit', anders: 'warmtekosten',
       badge: 'Indicatie, samen vast te stellen',
       warnHeat: 'Vul uw huidige warmtegebruik in voor een berekening.',
-      warnModule: (gas, m3) => `Met deze invoer is er nog geen module die volledig benut wordt. Eén module vraagt een warmtevraag van minstens ${gas}${m3 ? ` en minstens ${m3} m³ eigen reststroom per jaar` : ''}.`,
+      warnModule: (min) => `Bij een warmtevraag onder ${min} raden we een systeem af.`,
       gasEq: (n) => `${n} m³ aardgas per jaar`, kwhEq: (n) => `${n} kWh per jaar`,
       warnNeg: 'Met deze invoer levert het systeem nog geen positieve jaarbesparing. Pas de hoeveelheden of aannames aan, of bespreek uw situatie met ons.',
       jaar: ' jaar', nvt: 'n.v.t.',
@@ -87,7 +91,7 @@
       gas: 'natural gas', elek: 'electricity', anders: 'heating costs',
       badge: 'Indicative, to be established together',
       warnHeat: 'Enter your current heat use to see a calculation.',
-      warnModule: (gas, m3) => `With this input there is no module yet that is fully used. One module needs a heat demand of at least ${gas}${m3 ? ` and at least ${m3} m³ of own residual material per year` : ''}.`,
+      warnModule: (min) => `Below a heat demand of ${min} we advise against a system.`,
       gasEq: (n) => `${n} m³ of natural gas per year`, kwhEq: (n) => `${n} kWh per year`,
       warnNeg: 'With this input the system does not yet produce a positive annual saving. Adjust the amounts or the assumptions, or talk your situation through with us.',
       jaar: ' years', nvt: 'n/a',
@@ -208,25 +212,20 @@
       energyLabel = T.anders;
     }
 
-    // 2) hoeveel modules? Alleen modules die volledig benut worden: alle warmte valt
-    // binnen de warmtevraag en, bij eigen reststroom, elke vulling is met eigen
-    // materiaal gevuld. De rest van de warmtevraag dekt de klant met de bestaande installatie.
-    const modulesForDemand = heatDemand > 0 && heatPerModule > 0
+    // 2) hoeveel modules? Zoveel als er volledig benut worden binnen de warmtevraag.
+    // Is de vraag kleiner dan één module, maar minstens MIN_GAS_M3 aardgas, dan toch één
+    // module die een deel van zijn warmte benut. De rest van de warmtevraag dekt de klant
+    // met de bestaande installatie. De eigen reststroom begrenst het aantal niet.
+    const minDemand = MIN_GAS_M3 * GAS_KWH_M3 * BOILER_EFF;
+    const volleModules = heatDemand > 0 && heatPerModule > 0
       ? Math.floor(heatDemand / heatPerModule)
       : 0;
-    // beschikbare reststroom → aantal volle modules (per module 60 m³ per vulling)
+    const modules = volleModules >= 1 ? volleModules : (heatDemand >= minDemand && heatPerModule > 0 ? 1 : 0);
     const volume = num('roi-volume');
     const m3PerModule = fills * FILL_M3;
-    let modulesFromFeed = Infinity;
-    if (hasFeed) {
-      modulesFromFeed = m3PerModule > 0 ? Math.floor(volume / m3PerModule) : 0;
-    }
-    const modules = Math.max(0, Math.min(modulesForDemand, modulesFromFeed));
-    // Welke van de twee grenzen knelt? Zonder dat te tonen lijkt de rekenhulp
-    // stuk: meer reststroom invullen verandert dan niets zichtbaars.
-    const grens = modules < 1 ? null
-      : (modulesFromFeed < modulesForDemand ? T.grensFeed
-        : (modulesForDemand < modulesFromFeed ? T.grensHeat : null));
+    // Het aantal volgt altijd uit de warmtevraag; dat tonen we, anders lijkt de
+    // rekenhulp stuk als meer reststroom invullen niets verandert.
+    const grens = modules < 1 ? null : T.grensHeat;
 
     const heatCovered = Math.min(modules * heatPerModule, heatDemand);
 
@@ -268,7 +267,7 @@
       s, type, hasFeed, energy, energyLabel, modules,
       vermedenEnergie, verwerkingLine, aanvoerLine, compostValue, ownElec, onderhoud,
       jaarBesparing, investering, payback, naLevensduur, lifetime, co2Net,
-      heatDemand, volume, grens, heatPerModule, m3PerModule, pricePerKwh,
+      heatDemand, volume, grens, minDemand,
       dekking, perModule: modulePrice + installCost,
       processedM3, feedDekking: hasFeed && volume > 0 ? Math.min(1, processedM3 / volume) : 0,
     };
@@ -328,10 +327,10 @@
     if (r.heatDemand <= 0) {
       warn = `<div class="roi-warn">${T.warnHeat}</div>`;
     } else if (r.modules < 1) {
-      const gasMin = r.energy === 'gas'
-        ? T.gasEq(nl0.format(Math.ceil(r.heatPerModule / (GAS_KWH_M3 * BOILER_EFF) / 100) * 100))
-        : T.kwhEq(nl0.format(r.heatPerModule));
-      warn = `<div class="roi-warn">${T.warnModule(gasMin, r.hasFeed ? nl0.format(r.m3PerModule) : 0)}</div>`;
+      const min = r.energy === 'gas'
+        ? T.gasEq(nl0.format(MIN_GAS_M3))
+        : T.kwhEq(nl0.format(Math.round(r.minDemand / 1000) * 1000));
+      warn = `<div class="roi-warn">${T.warnModule(min)}</div>`;
     } else if (r.jaarBesparing <= 0) {
       warn = `<div class="roi-warn">${T.warnNeg}</div>`;
     }
