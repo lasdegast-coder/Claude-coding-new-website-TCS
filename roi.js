@@ -147,7 +147,7 @@
 
   // Ook het gasverbruik verschilt sterk per segment: een veehouderij stookt een
   // veelvoud van een tuincentrum. Vult het veld voor, tenzij de bezoeker het zelf aanpast.
-  const GAS_PER_SEG = { vee: 65000, terrein: 25000, kas: 25000 };
+  const GAS_PER_SEG = { vee: 65000, terrein: 20000, kas: 20000 };
   const gasInput = document.getElementById('roi-gas-m3');
   let gasTouched = false;
   if (gasInput) gasInput.addEventListener('input', () => { gasTouched = true; });
@@ -165,7 +165,7 @@
     if (uit) uit.textContent = String(stookmaanden());
     const zomer = document.querySelector('.roi-when-summer');
     if (zomer) zomer.hidden = stookmaanden() >= 12;
-    if (gasInput && !gasTouched) gasInput.value = GAS_PER_SEG[seg()] || 25000;
+    if (gasInput && !gasTouched) gasInput.value = GAS_PER_SEG[seg()] || 20000;
 
     const type = document.getElementById('roi-type').value;
     const hasFeed = type !== 'geen';
@@ -232,19 +232,17 @@
     // 3) jaarlijkse posten
     const vermedenEnergie = heatCovered * pricePerKwh;
 
-    // Hoeveel materiaal gaat er werkelijk doorheen? De capaciteit van de systemen,
-    // begrensd door wat de klant zelf aan reststroom heeft. Dit getal voedt zowel
-    // de verwerkings-/aanvoerkosten als de CO₂-berekening.
-    const capacityM3 = modules * m3PerModule;                // wat de systemen aankunnen
-    const processedM3 = hasFeed ? Math.min(volume, capacityM3) : capacityM3;
+    // Hoeveel materiaal gaat er doorheen? De modules worden altijd helemaal gevuld:
+    // eerst met de eigen reststroom, het tekort wordt aangevoerd. Dit getal voedt de
+    // verwerkings- en aanvoerkosten, de compost en de CO₂-berekening.
+    const capacityM3 = modules * m3PerModule;                // wat de systemen verwerken
+    const ownM3 = hasFeed ? Math.min(volume, capacityM3) : 0;
+    const aanvoerM3 = capacityM3 - ownM3;
+    const processedM3 = capacityM3;
 
-    let verwerkingLine = 0, aanvoerLine = 0;
-    if (hasFeed) {
-      verwerkingLine = processedM3 * num('roi-proc');
-    } else {
-      // geen eigen feedstock → materiaal moet worden aangevoerd (kostenpost)
-      aanvoerLine = processedM3 * aanvoerCost;
-    }
+    // eigen reststroom → vermeden verwerkingskosten; tekort → aanvoerkosten
+    const verwerkingLine = ownM3 * num('roi-proc');
+    const aanvoerLine = aanvoerM3 * aanvoerCost;
 
     // compost volgt het materiaal dat er werkelijk doorheen gaat, niet het aantal modules
     const compostM3 = processedM3 * compostShare;
@@ -269,7 +267,7 @@
       jaarBesparing, investering, payback, naLevensduur, lifetime, co2Net,
       heatDemand, volume, grens, minDemand,
       dekking, perModule: modulePrice + installCost,
-      processedM3, feedDekking: hasFeed && volume > 0 ? Math.min(1, processedM3 / volume) : 0,
+      processedM3, feedDekking: hasFeed && volume > 0 ? Math.min(1, ownM3 / volume) : 0,
     };
   }
 
@@ -363,7 +361,7 @@
         ? `<span class="roi-sub">${T.dektFeed(feedPct)}</span>` : '';
       lines.push(`<li><span>${T.vermedenProc}${feedSub}</span><span>${plus(r.verwerkingLine)}</span></li>`);
     }
-    if (!r.hasFeed && r.aanvoerLine > 0)
+    if (r.aanvoerLine > 0)
       lines.push(`<li class="neg"><span>${T.aanvoer}</span><span>${minus(r.aanvoerLine)}</span></li>`);
     lines.push(`<li><span>${T.compost}</span><span>${plus(r.compostValue)}</span></li>`);
     lines.push(`<li class="neg"><span>${T.stroom}</span><span>${minus(r.ownElec)}</span></li>`);
