@@ -1543,3 +1543,21 @@ a.partner-logo:hover { opacity: .7; }
   transition: color var(--dur) var(--ease-out);
 }
 .roi-reset:hover, .roi-reset:focus-visible { color: var(--ember-600, var(--forest-800)); }
+.roi-reset[hidden] { display: none; }
+
+/* Stookmaanden-schuif en vinkje doorcomposteren in de rekenhulp, zie roi.js */
+.field input[type="range"] {
+  padding: 0; border: 0; background: none; box-shadow: none;
+  accent-color: var(--forest-600); cursor: pointer; margin: 4px 0 0;
+}
+.field input[type="range"]:focus { box-shadow: none; }
+.roi-block > .field-row + .field { margin-top: var(--sp-3); }
+.field label.roi-check {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 500; color: var(--ink); cursor: pointer;
+}
+.field label.roi-check input[type="checkbox"] {
+  width: 18px; height: 18px; padding: 0; margin: 0; flex: none;
+  accent-color: var(--forest-600); cursor: pointer;
+}
+

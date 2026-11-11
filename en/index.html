@@ -415,7 +415,7 @@
               </div>
               <div class="field-row roi-when roi-when-gas">
                 <div class="field"><label for="roi-gas-m3">Gas use (m³/year)</label><input type="number" id="roi-gas-m3" min="0" value="25000" inputmode="numeric"></div>
-                <div class="field"><label for="roi-gas-price">Gas price (€/m³)</label><input type="number" id="roi-gas-price" min="0" step="0.01" value="1.20" inputmode="decimal"></div>
+                <div class="field"><label for="roi-gas-price">Gas price (€/m³)</label><input type="number" id="roi-gas-price" min="0" step="0.01" value="1.50" inputmode="decimal"></div>
               </div>
               <div class="field-row roi-when roi-when-elek" hidden>
                 <div class="field"><label for="roi-elek-kwh">Electricity for heat (kWh/year)</label><input type="number" id="roi-elek-kwh" min="0" value="120000" inputmode="numeric"></div>
@@ -424,6 +424,13 @@
               <div class="field-row roi-when roi-when-anders" hidden>
                 <div class="field"><label for="roi-anders-kwh">Heat use (kWh/year)</label><input type="number" id="roi-anders-kwh" min="0" value="150000" inputmode="numeric"></div>
                 <div class="field"><label for="roi-anders-price">Price (€/kWh)</label><input type="number" id="roi-anders-price" min="0" step="0.01" value="0.12" inputmode="decimal"></div>
+              </div>
+              <div class="field">
+                <label for="roi-months">Heating months per year: <output id="roi-months-out" for="roi-months">8</output></label>
+                <input type="range" id="roi-months" min="6" max="12" step="1" value="8">
+              </div>
+              <div class="field roi-when roi-when-summer">
+                <label class="roi-check"><input type="checkbox" id="roi-summer"> Keep composting outside the heating season</label>
               </div>
             </fieldset>
 
@@ -462,16 +469,15 @@
               <summary>Adjust assumptions</summary>
               <p class="roi-assump-note">Example values for an indication. Adjust them with the exact figures from an advisory call.</p>
               <div class="roi-assump-grid">
-                <label>Running hours per year<input type="number" id="a-hours" value="6570" min="0"></label>
-                <label>Heat per module (kW)<input type="number" id="a-kw" value="30" min="0"></label>
+                <label>Heat used per module (kWh/year)<input type="number" id="a-kwh" value="92300" min="0"></label>
                 <label>Purchase per module (€)<input type="number" id="a-price" value="90000" min="0"></label>
                 <label>Installation per module (€)<input type="number" id="a-install" value="15000" min="0"></label>
-                <label>Maintenance per module (€/year)<input type="number" id="a-maint" value="3500" min="0"></label>
+                <label>Maintenance per module (€/year)<input type="number" id="a-maint" value="1500" min="0"></label>
                 <label>System lifetime (years)<input type="number" id="a-life" value="15" min="1"></label>
                 <label>Compost from processed material (%)<input type="number" id="a-compost" value="50" min="0" max="100"></label>
                 <label>Compost value (€/m³)<input type="number" id="a-compostval" value="35" min="0"></label>
-                <label>Electricity price for own use (€/kWh)<input type="number" id="a-elec" value="0.30" min="0" step="0.01"></label>
-                <label>Feedstock supply costs (€/m³)<input type="number" id="a-aanvoer" value="10" min="0"></label>
+                <label>Electricity price for own use (€/kWh)<input type="number" id="a-elec" value="0.20" min="0" step="0.01"></label>
+                <label>Feedstock supply costs (€/m³)<input type="number" id="a-aanvoer" value="8" min="0"></label>
               </div>
               <button type="button" class="roi-reset" hidden>Restore default values</button>
             </details>

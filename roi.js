@@ -12,26 +12,35 @@
 
   // ---- vaste (niet-zichtbare) omreken-aannames ----
   const GAS_KWH_M3 = 9.77;   // calorische waarde aardgas
-  const BOILER_EFF = 0.90;   // rendement bestaande ketel
-  const OWN_KW = 1;          // eigen stroomverbruik per module
-  // Vuistregel Thermal Compost: één systeem verwerkt 55 m³ per maand = 660 m³/jaar.
-  // Vanaf 660 m³ komt er een tweede systeem bij, vanaf 1320 een derde, enz.
-  // Onder 55 m³ per jaar is een systeem niet zinvol.
-  const M3_PER_MONTH = 55;
-  const M3_PER_MODULE = M3_PER_MONTH * 12;   // 660 m³/jaar
-  const MIN_M3 = 55;
-  // Ondergrens voor de warmtedekking waarop we het aantal systemen baseren.
-  const COVERAGE_MIN = 0.85;
+  const BOILER_EFF = 0.82;   // rendement bestaande ketel op bovenwaarde (EST 2009: combiketels 82,5 %)
+  const OWN_KW = 0.6;        // eigen stroomverbruik per module (600 W)
+
+  // Vulling en warmte, uit het rekenvoorbeeld realistische vullingen (11 november 2026):
+  // 14,6 t droge stof per vulling van 60 m³, 85 % organische stof, 45 % daarvan
+  // afgebroken, 17,5 MJ per kg afgebroken organische stof, 85 % netto nuttig.
+  // Eén vulling duurt twee maanden inclusief legen en vullen. De bezoeker kiest hoeveel
+  // stookmaanden per jaar hij warmte gebruikt (6 tot 12), en of de module in de overige
+  // maanden doorcomposteert zonder dat de warmte benut wordt.
+  const HOURS_PER_YEAR = 8760;
+  const T_DS_FILL = 14.6;     // ton droge stof per vulling
+  const FILL_M3 = 60;         // m³ per vulling
+  const F_OS = 0.85;          // aandeel organische stof in de droge stof
+  const DEG = 0.45;           // deel van de organische stof dat afbreekt
+  const MJ_PER_KG = 17.5;     // warmte per kg afgebroken organische stof
+  const NET = 0.85;           // netto nuttig deel van de vrijgekomen warmte
+  const FILL_HOURS = HOURS_PER_YEAR / 6;
+  const KWH_PER_FILL = T_DS_FILL * 1000 * F_OS * DEG * MJ_PER_KG / 3.6 * NET;
+  const MONTHS_PER_FILL = 2;
+  // Benutte warmte per module per jaar, afgerond op 100 kWh: 92.300 bij 8 stookmaanden, 138.400 bij 12.
+  const kwhVoor = (maanden) => Math.round(KWH_PER_FILL * maanden / MONTHS_PER_FILL / 100) * 100;
 
   // CO₂: koolstof die in de compost wordt vastgelegd in plaats van te vervluchtigen.
   // m³ × kg droge stof per m³ × C-gehalte × C niet verdampt × C→CO₂
-  // De 218 kg is gemeten, niet geschat: een batch van 55 m³ bevat 12.000 kg droge stof.
   // Rekenen met nat gewicht zou de uitkomst ruim drie keer te hoog maken, want het
   // koolstofgehalte geldt voor de droge stof.
-  const HOURS_PER_YEAR = 8760;
-  const DS_PER_M3   = 218;   // gemeten droge stof per kuub (55 m³ per batch = 12.000 kg ds)
+  const DS_PER_M3   = T_DS_FILL * 1000 / FILL_M3;   // 243 kg droge stof per m³
   const C_SHARE     = 0.5;   // koolstofgehalte van de droge stof
-  const C_RETAINED  = 0.67;  // deel koolstof dat niet vervluchtigt
+  const C_RETAINED  = 1 - DEG; // deel koolstof dat niet vervluchtigt: wat niet afbreekt (0,55)
   const C_TO_CO2    = 3.67;  // koolstof → CO₂ (44/12)
 
   /* ---- taal ----
@@ -45,8 +54,8 @@
       gas: 'aardgas', elek: 'elektriciteit', anders: 'warmtekosten',
       badge: 'Indicatie, samen vast te stellen',
       warnHeat: 'Vul uw huidige warmtegebruik in voor een berekening.',
-      warnMin: (m) => `Onder ${m} m³ reststroom per jaar is een systeem niet zinvol. Vanaf ${m} m³ rekenen we het graag voor u door.`,
-      warnModule: 'Met deze invoer komt er nog geen volledige module uit. Er is meer reststroom nodig. Pas de hoeveelheid aan.',
+      warnModule: (gas, m3) => `Met deze invoer is er nog geen module die volledig benut wordt. Eén module vraagt een warmtevraag van minstens ${gas}${m3 ? ` en minstens ${m3} m³ eigen reststroom per jaar` : ''}.`,
+      gasEq: (n) => `${n} m³ aardgas per jaar`, kwhEq: (n) => `${n} kWh per jaar`,
       warnNeg: 'Met deze invoer levert het systeem nog geen positieve jaarbesparing. Pas de hoeveelheden of aannames aan, of bespreek uw situatie met ons.',
       jaar: ' jaar', nvt: 'n.v.t.',
       grensPre: 'begrensd door uw ', grensFeed: 'reststroom', grensHeat: 'warmtevraag',
@@ -78,8 +87,8 @@
       gas: 'natural gas', elek: 'electricity', anders: 'heating costs',
       badge: 'Indicative, to be established together',
       warnHeat: 'Enter your current heat use to see a calculation.',
-      warnMin: (m) => `Below ${m} m³ of residual material per year a system is not worthwhile. From ${m} m³ onwards we are happy to work it out for you.`,
-      warnModule: 'This input does not add up to a full module yet. More residual material is needed. Adjust the amount.',
+      warnModule: (gas, m3) => `With this input there is no module yet that is fully used. One module needs a heat demand of at least ${gas}${m3 ? ` and at least ${m3} m³ of own residual material per year` : ''}.`,
+      gasEq: (n) => `${n} m³ of natural gas per year`, kwhEq: (n) => `${n} kWh per year`,
       warnNeg: 'With this input the system does not yet produce a positive annual saving. Adjust the amounts or the assumptions, or talk your situation through with us.',
       jaar: ' years', nvt: 'n/a',
       grensPre: 'limited by your ', grensFeed: 'residual material', grensHeat: 'heat demand',
@@ -119,12 +128,18 @@
   const num = (id) => { const v = parseFloat(document.getElementById(id).value); return isFinite(v) && v > 0 ? v : 0; };
   const seg = () => (form.querySelector('input[name="seg"]:checked') || {}).value || 'kas';
 
-  // Warmte per module verschilt per segment: kassen hebben minder mest, dus
-  // een lagere warmteafgifte. Vult het veld voor, tenzij de bezoeker het zelf aanpast.
-  const KW_PER_SEG = { vee: 45, terrein: 35, kas: 30 };
-  const kwInput = document.getElementById('a-kw');
-  let kwTouched = false;
-  if (kwInput) kwInput.addEventListener('input', () => { kwTouched = true; });
+  // Benutte warmte per module volgt het aantal stookmaanden, tenzij de bezoeker het zelf aanpast.
+  const kwhInput = document.getElementById('a-kwh');
+  let kwhTouched = false;
+  if (kwhInput) kwhInput.addEventListener('input', () => { kwhTouched = true; });
+  const stookmaanden = () => Math.min(12, Math.max(6, num('roi-months') || 8));
+  // Doorcomposteren buiten het stookseizoen: de module draait dan het hele jaar.
+  // Het vinkje zet zichzelf aan als dat financieel beter uitpakt (zie render),
+  // tot de bezoeker het zelf aan- of uitzet.
+  const summerEl = document.getElementById('roi-summer');
+  let summerTouched = false;
+  if (summerEl) summerEl.addEventListener('change', () => { summerTouched = true; });
+  const doorcomposteren = () => !!(summerEl && summerEl.checked) || stookmaanden() >= 12;
 
   // Ook het gasverbruik verschilt sterk per segment: een veehouderij stookt een
   // veelvoud van een tuincentrum. Vult het veld voor, tenzij de bezoeker het zelf aanpast.
@@ -140,8 +155,12 @@
     document.querySelector('.roi-when-elek').hidden = energy !== 'elek';
     document.querySelector('.roi-when-anders').hidden = energy !== 'anders';
 
-    // warmte per module volgt het segment, zolang de bezoeker het veld niet zelf invulde
-    if (kwInput && !kwTouched) kwInput.value = KW_PER_SEG[seg()] || 45;
+    // benutte warmte per module volgt de stookmaanden, zolang de bezoeker het veld niet zelf invulde
+    if (kwhInput && !kwhTouched) kwhInput.value = kwhVoor(stookmaanden());
+    const uit = document.getElementById('roi-months-out');
+    if (uit) uit.textContent = String(stookmaanden());
+    const zomer = document.querySelector('.roi-when-summer');
+    if (zomer) zomer.hidden = stookmaanden() >= 12;
     if (gasInput && !gasTouched) gasInput.value = GAS_PER_SEG[seg()] || 25000;
 
     const type = document.getElementById('roi-type').value;
@@ -152,15 +171,18 @@
   }
 
   // ---- berekening ----
-  function calc() {
+  function calc(zomerKeuze) {
     const energy = document.getElementById('roi-energy').value;
     const type = document.getElementById('roi-type').value;
     const s = seg();
     const hasFeed = type !== 'geen';
 
-    const runHours = num('a-hours');
-    const kw = num('a-kw');
-    const heatPerModule = kw * runHours;                 // kWh/jaar per module
+    const maanden = stookmaanden();                      // maanden waarin de warmte benut wordt
+    const door = zomerKeuze === undefined ? doorcomposteren() : (zomerKeuze || maanden >= 12);
+    const draaimaanden = door ? 12 : maanden;            // maanden waarin de module composteert
+    const fills = draaimaanden / MONTHS_PER_FILL;        // vullingen per jaar
+    const runHours = fills * FILL_HOURS;                 // draaiuren per jaar
+    const heatPerModule = num('a-kwh');                  // benutte kWh/jaar per module
     const modulePrice = num('a-price');
     const installCost = num('a-install');
     const maintenance = num('a-maint');
@@ -186,19 +208,18 @@
       energyLabel = T.anders;
     }
 
-    // 2) hoeveel modules? (begrensd door warmtevraag en beschikbare reststroom)
-    // We adviseren het kleinste aantal dat minstens COVERAGE_MIN van de warmtevraag
-    // dekt. Anders komt er een hele module bij om de laatste procenten te halen,
-    // wat de investering verdubbelt terwijl die module grotendeels leegloopt.
-    // De rest dekt de klant met de bestaande installatie.
+    // 2) hoeveel modules? Alleen modules die volledig benut worden: alle warmte valt
+    // binnen de warmtevraag en, bij eigen reststroom, elke vulling is met eigen
+    // materiaal gevuld. De rest van de warmtevraag dekt de klant met de bestaande installatie.
     const modulesForDemand = heatDemand > 0 && heatPerModule > 0
-      ? Math.max(1, Math.ceil(COVERAGE_MIN * heatDemand / heatPerModule))
-      : 1;
-    // beschikbare reststroom → aantal systemen (660 m³ per stap, minimaal 55 m³)
+      ? Math.floor(heatDemand / heatPerModule)
+      : 0;
+    // beschikbare reststroom → aantal volle modules (per module 60 m³ per vulling)
     const volume = num('roi-volume');
+    const m3PerModule = fills * FILL_M3;
     let modulesFromFeed = Infinity;
     if (hasFeed) {
-      modulesFromFeed = volume < MIN_M3 ? 0 : Math.floor(volume / M3_PER_MODULE) + 1;
+      modulesFromFeed = m3PerModule > 0 ? Math.floor(volume / m3PerModule) : 0;
     }
     const modules = Math.max(0, Math.min(modulesForDemand, modulesFromFeed));
     // Welke van de twee grenzen knelt? Zonder dat te tonen lijkt de rekenhulp
@@ -215,8 +236,7 @@
     // Hoeveel materiaal gaat er werkelijk doorheen? De capaciteit van de systemen,
     // begrensd door wat de klant zelf aan reststroom heeft. Dit getal voedt zowel
     // de verwerkings-/aanvoerkosten als de CO₂-berekening.
-    const monthsRun = runHours * 12 / HOURS_PER_YEAR;        // draaiuren → maanden
-    const capacityM3 = modules * M3_PER_MONTH * monthsRun;   // wat de systemen aankunnen
+    const capacityM3 = modules * m3PerModule;                // wat de systemen aankunnen
     const processedM3 = hasFeed ? Math.min(volume, capacityM3) : capacityM3;
 
     let verwerkingLine = 0, aanvoerLine = 0;
@@ -248,7 +268,7 @@
       s, type, hasFeed, energy, energyLabel, modules,
       vermedenEnergie, verwerkingLine, aanvoerLine, compostValue, ownElec, onderhoud,
       jaarBesparing, investering, payback, naLevensduur, lifetime, co2Net,
-      heatDemand, volume, minM3: MIN_M3, grens,
+      heatDemand, volume, grens, heatPerModule, m3PerModule, pricePerKwh,
       dekking, perModule: modulePrice + installCost,
       processedM3, feedDekking: hasFeed && volume > 0 ? Math.min(1, processedM3 / volume) : 0,
     };
@@ -257,7 +277,7 @@
   /* De standaardwaarde van een aanname. De warmte per module is de uitzondering:
      die vult het formulier zelf in op basis van het gekozen segment. */
   const standaardVan = (el) => {
-    if (el.id === 'a-kw') return String(KW_PER_SEG[seg()] || el.defaultValue);
+    if (el.id === 'a-kwh') return String(kwhVoor(stookmaanden()));
     if (el.id === 'roi-gas-m3') return String(GAS_PER_SEG[seg()] || el.defaultValue);
     return el.defaultValue;
   };
@@ -271,7 +291,7 @@
       form.querySelectorAll('.roi-assumptions input').forEach((el) => {
         el.value = standaardVan(el);
       });
-      kwTouched = false;
+      kwhTouched = false;
       render();
       resetKnop.blur();
     });
@@ -287,6 +307,15 @@
   function render() {
     sync();
     toonReset();
+    // Doorcomposteren alleen aanzetten als het over de levensduur meer oplevert.
+    // De standaardstand gaat mee, zodat een automatisch vinkje niet telt als
+    // iets wat de bezoeker zelf heeft aangepast.
+    if (summerEl && !summerTouched && stookmaanden() < 12) {
+      const zonder = calc(false), met = calc(true);
+      const beter = met.modules > 0 && met.jaarBesparing > 0 && met.naLevensduur > zonder.naLevensduur;
+      summerEl.checked = beter;
+      summerEl.defaultChecked = beter;
+    }
     const r = calc();
 
     // Alleen bij 'overig organisch materiaal' is de warmteopbrengst echt onbekend,
@@ -298,10 +327,11 @@
     let warn = '';
     if (r.heatDemand <= 0) {
       warn = `<div class="roi-warn">${T.warnHeat}</div>`;
-    } else if (r.hasFeed && r.volume > 0 && r.volume < r.minM3) {
-      warn = `<div class="roi-warn">${T.warnMin(r.minM3)}</div>`;
     } else if (r.modules < 1) {
-      warn = `<div class="roi-warn">${T.warnModule}</div>`;
+      const gasMin = r.energy === 'gas'
+        ? T.gasEq(nl0.format(Math.ceil(r.heatPerModule / (GAS_KWH_M3 * BOILER_EFF) / 100) * 100))
+        : T.kwhEq(nl0.format(r.heatPerModule));
+      warn = `<div class="roi-warn">${T.warnModule(gasMin, r.hasFeed ? nl0.format(r.m3PerModule) : 0)}</div>`;
     } else if (r.jaarBesparing <= 0) {
       warn = `<div class="roi-warn">${T.warnNeg}</div>`;
     }
@@ -377,7 +407,7 @@
     let anders = false;
     form.querySelectorAll('input, select').forEach((el) => {
       if (anders) return;
-      if (el.type === 'radio') { if (el.checked !== el.defaultChecked) anders = true; }
+      if (el.type === 'radio' || el.type === 'checkbox') { if (el.checked !== el.defaultChecked) anders = true; }
       else if (el.tagName === 'SELECT') {
         let standaard = Array.prototype.findIndex.call(el.options, (o) => o.defaultSelected);
         if (standaard < 0) standaard = 0;
@@ -439,7 +469,11 @@
         aangepast: gekozen !== standaardSeg,
       });
     }
-    form.querySelectorAll('select, input[type="number"]').forEach((el) => {
+    form.querySelectorAll('input[type="checkbox"]').forEach((el) => {
+      if (el.closest('[hidden]')) return;
+      uit.push({ label: labelVan(el), waarde: el.checked ? 'ja' : 'nee', standaard: el.defaultChecked ? 'ja' : 'nee', aangepast: el.checked !== el.defaultChecked });
+    });
+    form.querySelectorAll('select, input[type="number"], input[type="range"]').forEach((el) => {
       if (el.closest('[hidden]')) return;
       if (el.tagName === 'SELECT') {
         let i = Array.prototype.findIndex.call(el.options, (o) => o.defaultSelected);
