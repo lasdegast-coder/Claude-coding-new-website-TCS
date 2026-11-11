@@ -70,7 +70,7 @@
       aanvoer: 'Aanvoerkosten feedstock', compost: 'Compostopbrengst',
       stroom: 'Eigen stroomverbruik', onderhoud: 'Onderhoud &amp; beheer',
       besparing: 'Jaarlijkse besparing', terugverdientijd: 'Terugverdientijd',
-      investering: 'Totale investering', naJaar: (n) => `Resultaat na ${n} jaar`,
+      investering: 'Totale investering', naJaar: (n) => `Resultaat na ${n} jaar`, invKort: 'investering',
       modules: 'Aanbevolen modules', co2: 'Vermeden CO₂', tonJr: ' ton/jr',
       note: 'Indicatie op basis van uw invoer en de getoonde aannames. Subsidie (SDE++/ISDE) is <strong>niet</strong> meegerekend en kan de terugverdientijd verder verkorten.',
       noteOnzeker: ' De exacte warmteopbrengst van deze reststroom stellen we samen met u vast.',
@@ -103,7 +103,7 @@
       aanvoer: 'Feedstock supply costs', compost: 'Compost revenue',
       stroom: 'Own electricity use', onderhoud: 'Maintenance &amp; management',
       besparing: 'Annual saving', terugverdientijd: 'Payback period',
-      investering: 'Total investment', naJaar: (n) => `Result after ${n} years`,
+      investering: 'Total investment', naJaar: (n) => `Result after ${n} years`, invKort: 'investment',
       modules: 'Recommended modules', co2: 'Avoided CO₂', tonJr: ' tonnes/yr',
       note: 'An indication based on your input and the assumptions shown. Subsidy (SDE++/ISDE) is <strong>not</strong> included and can shorten the payback period further.',
       noteOnzeker: ' We establish the exact heat yield of this residual stream together with you.',
@@ -142,7 +142,7 @@
   // tot de bezoeker het zelf aan- of uitzet.
   const summerEl = document.getElementById('roi-summer');
   let summerTouched = false;
-  if (summerEl) summerEl.addEventListener('change', () => { summerTouched = true; });
+  if (summerEl) ['input', 'change'].forEach((ev) => summerEl.addEventListener(ev, () => { summerTouched = true; }));
   const doorcomposteren = () => !!(summerEl && summerEl.checked) || stookmaanden() >= 12;
 
   // Ook het gasverbruik verschilt sterk per segment: een veehouderij stookt een
@@ -151,6 +151,22 @@
   const gasInput = document.getElementById('roi-gas-m3');
   let gasTouched = false;
   if (gasInput) gasInput.addEventListener('input', () => { gasTouched = true; });
+
+  // Soort reststroom volgt het segment, tot de bezoeker zelf kiest.
+  const TYPE_PER_SEG = { vee: 'mest', terrein: 'groen', kas: 'geen' };
+  const typeInput = document.getElementById('roi-type');
+  let typeTouched = false;
+  // 'input' komt in de browser vóór 'change' en vóór de herberekening van het formulier
+  if (typeInput) ['input', 'change'].forEach((ev) => typeInput.addEventListener(ev, () => { typeTouched = true; }));
+
+  // Eigen reststroom per vulling van 60 m³. Mest telt voor een derde: 20 m³ mest,
+  // aangevuld met 40 m³ stro, voerresten en dergelijke van het eigen erf (geen kosten).
+  // Groen en overig vullen de hele vulling.
+  const EIGEN_M3_PER_VULLING = { mest: 20, groen: 60, overig: 60 };
+  // Het volume volgt wat de berekende modules nodig hebben, tot de bezoeker zelf invult.
+  const volInput = document.getElementById('roi-volume');
+  let volTouched = false;
+  if (volInput) volInput.addEventListener('input', () => { volTouched = true; });
 
   // ---- toon/verberg velden op basis van keuzes ----
   function sync() {
@@ -166,6 +182,10 @@
     const zomer = document.querySelector('.roi-when-summer');
     if (zomer) zomer.hidden = stookmaanden() >= 12;
     if (gasInput && !gasTouched) gasInput.value = GAS_PER_SEG[seg()] || 20000;
+    if (typeInput && !typeTouched) {
+      const t = TYPE_PER_SEG[seg()] || 'geen';
+      [...typeInput.options].forEach((o) => { o.selected = o.defaultSelected = (o.value === t); });
+    }
 
     const type = document.getElementById('roi-type').value;
     const hasFeed = type !== 'geen';
@@ -191,8 +211,7 @@
     const installCost = num('a-install');
     const maintenance = num('a-maint');
     const lifetime = num('a-life') || 15;
-    const compostShare = num('a-compost') / 100;   // deel van het verwerkte materiaal dat compost wordt
-    const compostVal = num('a-compostval');
+    const compostVal = num('a-compostval');        // compostwaarde per m³ ingangsmateriaal
     const elecPriceOwn = num('a-elec');
     const aanvoerCost = num('a-aanvoer');
 
@@ -221,8 +240,10 @@
       ? Math.floor(heatDemand / heatPerModule)
       : 0;
     const modules = volleModules >= 1 ? volleModules : (heatDemand >= minDemand && heatPerModule > 0 ? 1 : 0);
-    const volume = num('roi-volume');
     const m3PerModule = fills * FILL_M3;
+    const eigenPerVulling = EIGEN_M3_PER_VULLING[type] || 0;
+    const eigenNodig = modules * fills * eigenPerVulling;   // eigen reststroom die de modules opnemen
+    const volume = volTouched ? num('roi-volume') : eigenNodig;
     // Het aantal volgt altijd uit de warmtevraag; dat tonen we, anders lijkt de
     // rekenhulp stuk als meer reststroom invullen niets verandert.
     const grens = modules < 1 ? null : T.grensHeat;
@@ -236,17 +257,19 @@
     // eerst met de eigen reststroom, het tekort wordt aangevoerd. Dit getal voedt de
     // verwerkings- en aanvoerkosten, de compost en de CO₂-berekening.
     const capacityM3 = modules * m3PerModule;                // wat de systemen verwerken
-    const ownM3 = hasFeed ? Math.min(volume, capacityM3) : 0;
-    const aanvoerM3 = capacityM3 - ownM3;
+    const ownM3 = hasFeed ? Math.min(volume, eigenNodig) : 0;
+    // tekort aan eigen reststroom wordt aangevoerd (bij mest alleen het mestdeel,
+    // stro en dergelijke komen van het erf; zonder eigen materiaal de hele vulling)
+    const aanvoerM3 = hasFeed ? eigenNodig - ownM3 : capacityM3;
     const processedM3 = capacityM3;
 
-    // eigen reststroom → vermeden verwerkingskosten; tekort → aanvoerkosten
+    // eigen reststroom → vermeden verwerkingskosten; tekort → aanvoerkosten.
+    // Een veehouder komt altijd kosteloos aan materiaal: voor hem geen aanvoerkosten.
     const verwerkingLine = ownM3 * num('roi-proc');
-    const aanvoerLine = aanvoerM3 * aanvoerCost;
+    const aanvoerLine = s === 'vee' ? 0 : aanvoerM3 * aanvoerCost;
 
     // compost volgt het materiaal dat er werkelijk doorheen gaat, niet het aantal modules
-    const compostM3 = processedM3 * compostShare;
-    const compostValue = compostM3 * compostVal;
+    const compostValue = processedM3 * compostVal;
     const ownElec = modules * OWN_KW * runHours * elecPriceOwn;
     const onderhoud = modules * maintenance;
 
@@ -267,7 +290,7 @@
       jaarBesparing, investering, payback, naLevensduur, lifetime, co2Net,
       heatDemand, volume, grens, minDemand,
       dekking, perModule: modulePrice + installCost,
-      processedM3, feedDekking: hasFeed && volume > 0 ? Math.min(1, ownM3 / volume) : 0,
+      processedM3, eigenNodig, feedDekking: hasFeed && volume > 0 ? Math.min(1, ownM3 / volume) : 0,
     };
   }
 
@@ -314,6 +337,10 @@
       summerEl.defaultChecked = beter;
     }
     const r = calc();
+    if (volInput && !volTouched) {
+      volInput.value = String(Math.round(r.eigenNodig));
+      volInput.defaultValue = volInput.value;
+    }
 
     // Alleen bij 'overig organisch materiaal' is de warmteopbrengst echt onbekend,
     // dus daar blijven het labeltje en het voorbehoud in de voetnoot staan.
@@ -378,7 +405,7 @@
       <ul class="roi-lines">${lines.join('')}</ul>
       <dl class="roi-sec">
         <div><dt>${T.investering}</dt><dd>${euro(r.investering)}${perStuk}</dd></div>
-        <div><dt>${T.naJaar(r.lifetime)}</dt><dd>${signed(r.naLevensduur)}</dd></div>
+        <div><dt>${T.naJaar(r.lifetime)}</dt><dd>${euro(r.jaarBesparing * r.lifetime)}<span class="roi-sub">${minus(r.investering)} ${T.invKort}</span><span class="roi-net">${signed(r.naLevensduur)}</span></dd></div>
         <div><dt>${T.modules}</dt><dd>${r.modules}${grensTxt}</dd></div>
         <div><dt>${T.co2}</dt><dd>${nl1.format(Math.max(0, r.co2Net) / 1000)}${T.tonJr}</dd></div>
       </dl>
