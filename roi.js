@@ -49,8 +49,9 @@
   // dat de modules bij deze warmtevraag nodig hebben. Minder eigen materiaal betekent
   // dan minder modules, maar nooit minder dan één.
   const AANVOER_MAX_KAS = 0.5;
-  // Tuincentrum en kas met meer dan twee modules: als de bezoeker zelf geen hoeveelheid
-  // invult, rekenen we met 1 m³ reststroom per 1.000 m³ aardgas(-equivalent) per jaar.
+  // Tuincentrum en kas: als de bezoeker zelf geen hoeveelheid invult, vullen de eerste twee
+  // modules zich met eigen materiaal (naar rato van de benutte warmte). Vanaf de derde module
+  // rekenen we met 1 m³ reststroom per 1.000 m³ aardgas(-equivalent) dat daarna overblijft.
   const KAS_M3_PER_1000_GAS = 1;
   // Vermeden CO₂ door minder stoken. Aardgas: 56,2 kg CO₂/GJ x 31,65 MJ/Nm³ = 1,78 kg per m³
   // (RVO, Nederlandse energiedragerlijst januari 2026; CO2emissiefactoren.nl 1,782 kg/Nm³).
@@ -290,19 +291,19 @@
       }
       return vol;
     };
-    // Eigen reststroom als de bezoeker zelf niets invult: wat de modules opnemen, naar rato
-    // van de warmte die werkelijk benut wordt. Bij een tuincentrum of kas met meer dan twee
-    // modules rekenen we met KAS_M3_PER_1000_GAS m³ reststroom per 1.000 m³ aardgas.
+    // Eigen reststroom als de bezoeker zelf niets invult. Veehouder en terreinbeheerder:
+    // wat de modules opnemen. Tuincentrum en kas: de eerste twee modules naar rato van de
+    // benutte warmte, vanaf de derde 1 m³ per 1.000 m³ aardgas dat daarna overblijft.
     const gasEquivalent = heatDemand / (GAS_KWH_M3 * BOILER_EFF);
-    const heatStart = kwhTouched ? num('a-kwh')
-      : Math.round(heatNormaal * (1 - (type === 'overig' ? VERLAGING_OVERIG : 0)) / 100) * 100;
-    const kasRegel = s === 'kas' && type !== 'geen' && !volTouched && aantalVoor(heatStart) > 2;
     const volumeVoor = (n, heat) => {
       if (type === 'geen') return 0;
       if (volTouched) return num('roi-volume');
-      if (kasRegel) return gasEquivalent * KAS_M3_PER_1000_GAS / 1000;
+      const perModule = fills * eigenPerVulling;
+      if (s !== 'kas') return n * perModule;
       const gebruikt = n > 0 && heat > 0 ? Math.min(1, heatDemand / (n * heat)) : 1;
-      return n * fills * eigenPerVulling * gebruikt;
+      if (n <= 2) return n * perModule * gebruikt;
+      const restGas = Math.max(0, gasEquivalent - 2 * heat / (GAS_KWH_M3 * BOILER_EFF));
+      return 2 * perModule + restGas * KAS_M3_PER_1000_GAS / 1000;
     };
     // Plafond op de aanvoer bij tuincentrum en kas (niet bij mest: dat vult het eigen terrein aan).
     const aanvoerPlafond = s === 'kas' && type !== 'mest';
@@ -323,17 +324,32 @@
       const n = aantalVoor(heatPerModule);
       modules = begrens(n, volumeVoor(n, heatPerModule));
     } else {
-      aandeel = type === 'overig' ? 1 : 0;
-      for (let i = 0; i < 8; i++) {
-        heatPerModule = Math.round(heatNormaal * (1 - VERLAGING_OVERIG * aandeel) / 100) * 100;
+      const ronde = (a) => {
+        const heat = Math.round(heatNormaal * (1 - VERLAGING_OVERIG * a) / 100) * 100;
         kasDekkingGrens = false; materiaalGrens = false;
-        const n = aantalVoor(heatPerModule);
-        modules = begrens(n, volumeVoor(n, heatPerModule));
-        if (type !== 'overig' || modules < 1) break;
-        const nieuw = Math.min(1, volumeVoor(modules, heatPerModule) / (modules * m3PerModule));
-        if (Math.abs(nieuw - aandeel) < 0.001) break;
-        aandeel = nieuw;
+        const n = aantalVoor(heat);
+        const m = begrens(n, volumeVoor(n, heat));
+        const volgend = type === 'overig' && m > 0
+          ? Math.min(1, volumeVoor(m, heat) / (m * m3PerModule)) : a;
+        return { heat, m, volgend, kd: kasDekkingGrens, mg: materiaalGrens };
+      };
+      aandeel = type === 'overig' ? 1 : 0;
+      let uit = ronde(aandeel);
+      const gezien = [uit.m];
+      for (let i = 0; i < 10 && type === 'overig' && uit.m > 0; i++) {
+        if (Math.abs(uit.volgend - aandeel) < 0.001) break;
+        aandeel = uit.volgend;
+        uit = ronde(aandeel);
+        // springt het aantal heen en weer, dan kiezen we voorzichtig het kleinste
+        if (gezien.length >= 2 && gezien[gezien.length - 2] === uit.m && gezien[gezien.length - 1] !== uit.m) {
+          const kleinste = Math.min(uit.m, gezien[gezien.length - 1]);
+          if (uit.m !== kleinste) { aandeel = uit.volgend; uit = ronde(aandeel); }
+          break;
+        }
+        gezien.push(uit.m);
       }
+      heatPerModule = uit.heat; modules = uit.m;
+      kasDekkingGrens = uit.kd; materiaalGrens = uit.mg;
     }
     const eigenNodig = modules * fills * eigenPerVulling;   // eigen reststroom die de modules opnemen
     const volume = volumeVoor(modules, heatPerModule);
