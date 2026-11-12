@@ -147,10 +147,27 @@
 
   // Ook het gasverbruik verschilt sterk per segment: een veehouderij stookt een
   // veelvoud van een tuincentrum. Vult het veld voor, tenzij de bezoeker het zelf aanpast.
-  const GAS_PER_SEG = { vee: 20000, terrein: 20000, kas: 20000 };
+  const GAS_PER_SEG = { vee: 65000, terrein: 20000, kas: 20000 };
   const gasInput = document.getElementById('roi-gas-m3');
   let gasTouched = false;
   if (gasInput) gasInput.addEventListener('input', () => { gasTouched = true; });
+
+  // Gasprijs per segment: tuincentra en kassen hebben een lager tarief.
+  const GAS_PRICE_PER_SEG = { vee: 1.65, terrein: 1.65, kas: 1.55 };
+  const priceInput = document.getElementById('roi-gas-price');
+  let priceTouched = false;
+  if (priceInput) priceInput.addEventListener('input', () => { priceTouched = true; });
+
+  // Verwerkingskosten per soort reststroom: mest 35 per m³, overige stromen
+  // 10 cent per kg, ongeveer 45 per m³.
+  const PROC_PER_TYPE = { mest: 35, groen: 45, overig: 45 };
+  const procInput = document.getElementById('roi-proc');
+  let procTouched = false;
+  if (procInput) procInput.addEventListener('input', () => { procTouched = true; });
+
+  // Een veld dat de rekenhulp zelf invult, krijgt die waarde ook als standaard,
+  // zodat het niet telt als iets wat de bezoeker heeft aangepast.
+  const vulIn = (el, waarde) => { el.value = String(waarde); el.defaultValue = el.value; };
 
   // Soort reststroom volgt het segment, tot de bezoeker zelf kiest.
   const TYPE_PER_SEG = { vee: 'mest', terrein: 'groen', kas: 'overig' };
@@ -159,10 +176,10 @@
   // 'input' komt in de browser vóór 'change' en vóór de herberekening van het formulier
   if (typeInput) ['input', 'change'].forEach((ev) => typeInput.addEventListener(ev, () => { typeTouched = true; }));
 
-  // Eigen reststroom per vulling van 60 m³. Mest telt voor een derde: 20 m³ mest,
-  // aangevuld met 40 m³ stro, voerresten en dergelijke van het eigen erf (geen kosten).
+  // Eigen reststroom per vulling van 60 m³. Mest telt voor de helft: 30 m³ mest,
+  // aangevuld met 30 m³ stro, voerresten en dergelijke van het eigen erf (geen kosten).
   // Groen en overig vullen de hele vulling.
-  const EIGEN_M3_PER_VULLING = { mest: 20, groen: 60, overig: 60 };
+  const EIGEN_M3_PER_VULLING = { mest: 30, groen: 60, overig: 60 };
   // Het volume volgt wat de berekende modules nodig hebben, tot de bezoeker zelf invult.
   const volInput = document.getElementById('roi-volume');
   let volTouched = false;
@@ -181,11 +198,14 @@
     if (uit) uit.textContent = String(stookmaanden());
     const zomer = document.querySelector('.roi-when-summer');
     if (zomer) zomer.hidden = stookmaanden() >= 12;
-    if (gasInput && !gasTouched) gasInput.value = GAS_PER_SEG[seg()] || 20000;
+    if (gasInput && !gasTouched) vulIn(gasInput, GAS_PER_SEG[seg()] || 20000);
+    if (priceInput && !priceTouched) vulIn(priceInput, (GAS_PRICE_PER_SEG[seg()] || 1.65).toFixed(2));
     if (typeInput && !typeTouched) {
       const t = TYPE_PER_SEG[seg()] || 'geen';
       [...typeInput.options].forEach((o) => { o.selected = o.defaultSelected = (o.value === t); });
     }
+    const soort = typeInput ? typeInput.value : 'geen';
+    if (procInput && !procTouched && PROC_PER_TYPE[soort]) vulIn(procInput, PROC_PER_TYPE[soort]);
 
     const type = document.getElementById('roi-type').value;
     const hasFeed = type !== 'geen';
@@ -264,9 +284,10 @@
     const processedM3 = capacityM3;
 
     // eigen reststroom → vermeden verwerkingskosten; tekort → aanvoerkosten.
-    // Wie mest heeft, vult altijd kosteloos aan met materiaal van het eigen terrein.
+    // Wie mest heeft vult altijd kosteloos aan met materiaal van het eigen terrein,
+    // en een veehouder komt altijd kosteloos aan materiaal.
     const verwerkingLine = ownM3 * num('roi-proc');
-    const aanvoerLine = type === 'mest' ? 0 : aanvoerM3 * aanvoerCost;
+    const aanvoerLine = (type === 'mest' || s === 'vee') ? 0 : aanvoerM3 * aanvoerCost;
 
     // compost volgt het materiaal dat er werkelijk doorheen gaat, niet het aantal modules
     const compostValue = processedM3 * compostVal;
