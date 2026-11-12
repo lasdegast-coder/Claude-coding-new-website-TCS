@@ -49,6 +49,15 @@
   // dat de modules bij deze warmtevraag nodig hebben. Minder eigen materiaal betekent
   // dan minder modules, maar nooit minder dan één.
   const AANVOER_MAX_KAS = 0.5;
+  // Tuincentrum en kas met meer dan twee modules: als de bezoeker zelf geen hoeveelheid
+  // invult, rekenen we met 1 m³ reststroom per 1.000 m³ aardgas(-equivalent) per jaar.
+  const KAS_M3_PER_1000_GAS = 1;
+  // Vermeden CO₂ door minder stoken. Aardgas: 56,2 kg CO₂/GJ x 31,65 MJ/Nm³ = 1,78 kg per m³
+  // (RVO, Nederlandse energiedragerlijst januari 2026; CO2emissiefactoren.nl 1,782 kg/Nm³).
+  // Stroom: 0,337 kg per kWh (CO2emissiefactoren.nl 2026, stroom onbekend). Bij 'anders'
+  // is de brandstof onbekend en tellen we alleen de koolstof in de compost.
+  const CO2_GAS_KG_M3 = 1.78;
+  const CO2_ELEK_KG_KWH = 0.337;
   // Benutte warmte per module per jaar, afgerond op 100 kWh: 92.300 bij 8 stookmaanden, 138.400 bij 12.
   const kwhVoor = (maanden) => Math.round(KWH_PER_FILL * maanden / MONTHS_PER_FILL / 100) * 100;
 
@@ -70,7 +79,6 @@
   const T = {
     nl: {
       gas: 'aardgas', elek: 'elektriciteit', anders: 'warmtekosten',
-      badge: 'Indicatie, samen vast te stellen',
       warnHeat: 'Vul uw huidige warmtegebruik in voor een berekening.',
       warnModule: (min) => `Bij een warmtevraag onder ${min} raden we een systeem af.`,
       gasEq: (n) => `${n} m³ aardgas per jaar`, kwhEq: (n) => `${n} kWh per jaar`,
@@ -87,7 +95,6 @@
       investering: 'Totale investering', naJaar: (n) => `Resultaat na ${n} jaar`, systeem: 'Systeem', installatie: 'Installatie',
       modules: 'Aanbevolen modules', co2: 'Vermeden CO₂', tonJr: ' ton/jr',
       note: 'Indicatie op basis van uw invoer en de getoonde aannames. Subsidie (SDE++/ISDE) is <strong>niet</strong> meegerekend en kan de terugverdientijd verder verkorten.',
-      noteOnzeker: ' De exacte warmteopbrengst van deze reststroom stellen we samen met u vast.',
       cta: 'Plan een gesprek over uw berekening',
       reset: 'Herstel standaardwaarden',
       bSituatie: 'Situatie:', bVerwarmt: 'Verwarmt nu met:', bVerbruik: 'Verbruik:',
@@ -103,7 +110,6 @@
     },
     en: {
       gas: 'natural gas', elek: 'electricity', anders: 'heating costs',
-      badge: 'Indicative, to be established together',
       warnHeat: 'Enter your current heat use to see a calculation.',
       warnModule: (min) => `Below a heat demand of ${min} we advise against a system.`,
       gasEq: (n) => `${n} m³ of natural gas per year`, kwhEq: (n) => `${n} kWh per year`,
@@ -120,7 +126,6 @@
       investering: 'Total investment', naJaar: (n) => `Result after ${n} years`, systeem: 'System', installatie: 'Installation',
       modules: 'Recommended modules', co2: 'Avoided CO₂', tonJr: ' tonnes/yr',
       note: 'An indication based on your input and the assumptions shown. Subsidy (SDE++/ISDE) is <strong>not</strong> included and can shorten the payback period further.',
-      noteOnzeker: ' We establish the exact heat yield of this residual stream together with you.',
       cta: 'Book a call about your calculation',
       reset: 'Restore default values',
       bSituatie: 'Situation:', bVerwarmt: 'Currently heating with:', bVerbruik: 'Consumption:',
@@ -272,48 +277,69 @@
     const minDemand = MIN_GAS_M3 * GAS_KWH_M3 * BOILER_EFF;
     const m3PerModule = fills * FILL_M3;
     const eigenPerVulling = EIGEN_M3_PER_VULLING[type] || 0;
+    let kasDekkingGrens = false;
     const aantalVoor = (heat) => {
       if (!(heatDemand > 0 && heat > 0)) return 0;
       const vol = Math.floor(heatDemand / heat);
       if (vol < 1) return heatDemand >= minDemand ? 1 : 0;
       if (s === 'kas' && vol > 1) {
         const max = type === 'overig' ? DEKKING_MAX_KAS_OVERIG : DEKKING_MAX_KAS;
-        return Math.max(1, Math.floor(max * heatDemand / heat));
+        const n = Math.max(1, Math.floor(max * heatDemand / heat));
+        if (n < vol) kasDekkingGrens = true;
+        return n;
       }
       return vol;
     };
-    // Warmte per module hangt bij 'overig' af van het aandeel eigen materiaal, en dat
-    // aandeel van het aantal modules. Een paar rondes rekenen zijn genoeg om dat vast te zetten.
+    // Eigen reststroom als de bezoeker zelf niets invult: wat de modules opnemen, naar rato
+    // van de warmte die werkelijk benut wordt. Bij een tuincentrum of kas met meer dan twee
+    // modules rekenen we met KAS_M3_PER_1000_GAS m³ reststroom per 1.000 m³ aardgas.
+    const gasEquivalent = heatDemand / (GAS_KWH_M3 * BOILER_EFF);
+    const heatStart = kwhTouched ? num('a-kwh')
+      : Math.round(heatNormaal * (1 - (type === 'overig' ? VERLAGING_OVERIG : 0)) / 100) * 100;
+    const kasRegel = s === 'kas' && type !== 'geen' && !volTouched && aantalVoor(heatStart) > 2;
+    const volumeVoor = (n, heat) => {
+      if (type === 'geen') return 0;
+      if (volTouched) return num('roi-volume');
+      if (kasRegel) return gasEquivalent * KAS_M3_PER_1000_GAS / 1000;
+      const gebruikt = n > 0 && heat > 0 ? Math.min(1, heatDemand / (n * heat)) : 1;
+      return n * fills * eigenPerVulling * gebruikt;
+    };
     // Plafond op de aanvoer bij tuincentrum en kas (niet bij mest: dat vult het eigen terrein aan).
     const aanvoerPlafond = s === 'kas' && type !== 'mest';
-    const eigenVolume = () => (type === 'geen' ? 0 : (volTouched ? num('roi-volume') : Infinity));
     let materiaalGrens = false;
-    const begrens = (n) => {
+    const begrens = (n, vol) => {
       if (!aanvoerPlafond || n <= 1) return n;
       const maxAanvoer = AANVOER_MAX_KAS * n * m3PerModule;
-      const kan = Math.max(1, Math.floor((eigenVolume() + maxAanvoer) / m3PerModule));
+      const kan = Math.max(1, Math.floor((vol + maxAanvoer) / m3PerModule));
       if (kan < n) { materiaalGrens = true; return kan; }
       return n;
     };
-    let heatPerModule, modules, eigenNodig, volume;
+    // Warmte per module hangt bij 'overig' af van het aandeel eigen materiaal, en dat
+    // aandeel van het aantal modules. Een paar rondes rekenen zetten dat vast.
+    let heatPerModule, modules, aandeel = 0;
     if (kwhTouched) {
       heatPerModule = num('a-kwh');
-      modules = begrens(aantalVoor(heatPerModule));
+      kasDekkingGrens = false; materiaalGrens = false;
+      const n = aantalVoor(heatPerModule);
+      modules = begrens(n, volumeVoor(n, heatPerModule));
     } else {
-      let aandeel = type === 'overig' ? 1 : 0;
-      for (let i = 0; i < 5; i++) {
+      aandeel = type === 'overig' ? 1 : 0;
+      for (let i = 0; i < 8; i++) {
         heatPerModule = Math.round(heatNormaal * (1 - VERLAGING_OVERIG * aandeel) / 100) * 100;
-        materiaalGrens = false;
-        modules = begrens(aantalVoor(heatPerModule));
-        if (type !== 'overig' || !volTouched || modules < 1) break;
-        aandeel = Math.min(1, num('roi-volume') / (modules * m3PerModule));
+        kasDekkingGrens = false; materiaalGrens = false;
+        const n = aantalVoor(heatPerModule);
+        modules = begrens(n, volumeVoor(n, heatPerModule));
+        if (type !== 'overig' || modules < 1) break;
+        const nieuw = Math.min(1, volumeVoor(modules, heatPerModule) / (modules * m3PerModule));
+        if (Math.abs(nieuw - aandeel) < 0.001) break;
+        aandeel = nieuw;
       }
     }
-    eigenNodig = modules * fills * eigenPerVulling;   // eigen reststroom die de modules opnemen
-    volume = volTouched ? num('roi-volume') : eigenNodig;
+    const eigenNodig = modules * fills * eigenPerVulling;   // eigen reststroom die de modules opnemen
+    const volume = volumeVoor(modules, heatPerModule);
     // Het aantal volgt altijd uit de warmtevraag; dat tonen we, anders lijkt de
     // rekenhulp stuk als meer reststroom invullen niets verandert.
-    const grens = modules < 1 ? null : (materiaalGrens ? 'mat' : T.grensHeat);
+    const grens = modules < 1 ? null : (materiaalGrens ? 'mat' : (kasDekkingGrens ? T.grensFeed : T.grensHeat));
 
     const heatCovered = Math.min(modules * heatPerModule, heatDemand);
 
@@ -348,7 +374,14 @@
 
     // CO₂ — koolstof die in de compost vastgelegd blijft i.p.v. te vervluchtigen,
     // berekend over het materiaal dat er werkelijk doorheen gaat
-    const co2Net = processedM3 * DS_PER_M3 * C_SHARE * C_RETAINED * C_TO_CO2;
+    // vastgelegd in de compost: droge stof volgt de vulling (bij eigen 'overig' De Boerinn)
+    const aandeelOverig = type === 'overig' && processedM3 > 0 ? Math.min(1, ownM3 / processedM3) : 0;
+    const dsPerM3 = DS_PER_M3 * (1 - VERLAGING_OVERIG * aandeelOverig);
+    const co2Compost = processedM3 * dsPerM3 * C_SHARE * C_RETAINED * C_TO_CO2;
+    // vermeden door minder stoken
+    const co2Stoken = energy === 'gas' ? heatCovered / (GAS_KWH_M3 * BOILER_EFF) * CO2_GAS_KG_M3
+      : (energy === 'elek' ? heatCovered * CO2_ELEK_KG_KWH : 0);
+    const co2Net = co2Compost + co2Stoken;
 
     const dekking = heatDemand > 0 ? heatCovered / heatDemand : 0;
 
@@ -356,7 +389,7 @@
       s, type, hasFeed, energy, energyLabel, modules,
       vermedenEnergie, verwerkingLine, aanvoerLine, compostValue, ownElec, onderhoud,
       jaarBesparing, investering, payback, naLevensduur, lifetime, co2Net,
-      heatDemand, volume, grens, minDemand, heatPerModule,
+      heatDemand, volume, grens, minDemand, heatPerModule, heatCovered, ownM3, aanvoerM3, co2Compost, co2Stoken,
       dekking, perModule: modulePrice + installCost, modulePrice, installCost,
       processedM3, eigenNodig, feedDekking: hasFeed && volume > 0 ? Math.min(1, ownM3 / volume) : 0,
     };
@@ -406,7 +439,7 @@
     }
     const r = calc();
     if (volInput && !volTouched) {
-      volInput.value = String(Math.round(r.eigenNodig));
+      volInput.value = String(Math.round(r.volume));
       volInput.defaultValue = volInput.value;
     }
     if (kwhInput && !kwhTouched) {
@@ -415,11 +448,7 @@
     }
     toonReset();
 
-    // Alleen bij 'overig organisch materiaal' is de warmteopbrengst echt onbekend,
-    // dus daar blijven het labeltje en het voorbehoud in de voetnoot staan.
-    const onzeker = r.type === 'overig';
-    const badge = onzeker
-      ? `<span class="roi-badge ind">${T.badge}</span>` : '';
+    const badge = '';
 
     let warn = '';
     if (r.heatDemand <= 0) {
@@ -491,7 +520,7 @@
         <div><dt>${T.modules}</dt><dd>${r.modules}${grensTxt}</dd></div>
         <div><dt>${T.co2}</dt><dd>${nl1.format(Math.max(0, r.co2Net) / 1000)}${T.tonJr}</dd></div>
       </dl>
-      <p class="roi-note">${T.note}${restNote}${onzeker ? T.noteOnzeker : ''}</p>
+      <p class="roi-note">${T.note}${restNote}</p>
       <a class="btn btn-primary btn-block" href="#contact">${T.cta}</a>
     `;
   }
@@ -618,39 +647,74 @@
         ? nl0.format(num('roi-elek-kwh')) + T.bKwhJaar + prijs('roi-elek-price') + T.bPerKwh
         : nl0.format(num('roi-anders-kwh')) + T.bKwhJaar + prijs('roi-anders-price') + T.bPerKwh);
 
-    // Labels uitlijnen op de langste, zodat de mail in beide talen netjes oogt.
-    const labels = [T.bSituatie, T.bVerwarmt, T.bVerbruik, T.bRest, T.bHoeveel, T.bProc,
-      T.bTerugverdien, T.bBesparing, T.bInvestering, T.bModules, T.bDekking, T.bCo2];
-    const breed = Math.max(...labels.map((l) => l.length)) + 2;
-    const rij = (label, waarde) => label.padEnd(breed) + waarde;
+    const ML = LANG === 'en' ? {
+      maanden: 'Heating months:', door: 'Composting outside the heating season:', ja: 'yes', nee: 'no',
+      zelf: ' (entered by visitor)', geschat: ' (estimated by the calculator)', aannames: 'ASSUMPTIONS',
+      aangepast: '  (changed, default ', grens: 'Limited by:', warmte: 'Heat used per module:', kwhJaar: ' kWh per year',
+      materiaal: 'Material processed:', eigen: 'own', aanvoer: 'supplied', m3: ' m³ per year',
+      posten: 'ANNUAL ITEMS', inv: 'Total investment:', resultaat: (n) => `Result after ${n} years:`,
+      totaal: 'total', netto: 'net', co2: 'Avoided CO₂:', co2Stoken: 'from less heating', co2Compost: 'stored in compost',
+    } : {
+      maanden: 'Stookmaanden:', door: 'Doorcomposteren buiten stookseizoen:', ja: 'ja', nee: 'nee',
+      zelf: ' (zelf ingevuld)', geschat: ' (door de rekenhulp ingeschat)', aannames: 'AANNAMES',
+      aangepast: '  (aangepast, standaard ', grens: 'Begrensd door:', warmte: 'Benutte warmte per module:', kwhJaar: ' kWh per jaar',
+      materiaal: 'Verwerkt materiaal:', eigen: 'eigen', aanvoer: 'aangevoerd', m3: ' m³ per jaar',
+      posten: 'POSTEN PER JAAR', inv: 'Totale investering:', resultaat: (n) => `Resultaat na ${n} jaar:`,
+      totaal: 'totaal', netto: 'netto', co2: 'Vermeden CO₂:', co2Stoken: 'door minder stoken', co2Compost: 'vastgelegd in compost',
+    };
+    const zomer = document.getElementById('roi-summer');
+    const ton = (kg) => nl1.format(Math.max(0, kg) / 1000);
+    const maal = r.modules > 1 ? `${r.modules}x ` : '';
+    const grensTekst = r.grens === 'mat' ? (LANG === 'en' ? 'available material' : 'beschikbaar materiaal') : (r.grens || '');
 
-    const regels = [
-      rij(T.bSituatie, segTekst()),
-      rij(T.bVerwarmt, energie),
-      rij(T.bVerbruik, verbruik),
-      rij(T.bRest, keuzeTekst('roi-type')),
+    // Rijen als [label, waarde]; lege rij = witregel, rij met één element = kopje.
+    const rijen = [
+      [T.bSituatie, segTekst()],
+      [T.bVerwarmt, energie],
+      [T.bVerbruik, verbruik],
+      [ML.maanden, String(stookmaanden())],
+      [ML.door, (zomer && zomer.checked) || stookmaanden() >= 12 ? ML.ja : ML.nee],
+      [T.bRest, keuzeTekst('roi-type')],
     ];
     if (r.hasFeed) {
-      regels.push(rij(T.bHoeveel, nl0.format(r.volume) + T.bM3Jaar));
-      regels.push(rij(T.bProc, prijs('roi-proc') + T.bPerM3));
+      rijen.push([T.bHoeveel, nl0.format(Math.round(r.volume)) + T.bM3Jaar + (volTouched ? ML.zelf : ML.geschat)]);
+      rijen.push([T.bProc, prijs('roi-proc') + T.bPerM3]);
     }
-
-    const aangepast = gewijzigdeAannames();
-    if (aangepast.length) {
-      regels.push('', T.bAangepast);
-      aangepast.forEach((a) => regels.push('  ' + a));
-    }
-
-    regels.push(
-      '',
-      T.bUitkomst,
-      rij(T.bTerugverdien, r.payback ? nl1.format(r.payback) + T.jaar : T.bGeen),
-      rij(T.bBesparing, euro(r.jaarBesparing)),
-      rij(T.bInvestering, euro(r.investering)),
-      rij(T.bModules, String(r.modules)),
-      rij(T.bDekking, Math.round(r.dekking * 100) + '%'),
-      rij(T.bCo2, nl1.format(Math.max(0, r.co2Net) / 1000) + T.bTonJaar)
+    rijen.push([], [ML.aannames]);
+    document.querySelectorAll('.roi-assumptions input').forEach((el) => {
+      const lab = el.closest('label');
+      const naam = lab ? lab.childNodes[0].textContent.trim() : el.id;
+      const std = standaardVan(el);
+      rijen.push(['  ' + naam + ':', el.value + (el.value !== std ? ML.aangepast + std + ')' : '')]);
+    });
+    rijen.push(
+      [], [T.bUitkomst],
+      [T.bTerugverdien, r.payback ? nl1.format(r.payback) + T.jaar : T.bGeen],
+      [T.bModules, String(r.modules)],
     );
+    if (grensTekst) rijen.push([ML.grens, grensTekst]);
+    rijen.push(
+      [T.bDekking, Math.round(r.dekking * 100) + '%'],
+      [ML.warmte, nl0.format(r.heatPerModule) + ML.kwhJaar],
+      [ML.materiaal, nl0.format(Math.round(r.processedM3)) + ML.m3 + ` (${ML.eigen} ${nl0.format(Math.round(r.ownM3))}, ${ML.aanvoer} ${nl0.format(Math.round(r.aanvoerM3))})`],
+      [], [ML.posten],
+      [T.vermeden + r.energyLabel + ':', plus(r.vermedenEnergie)],
+    );
+    if (r.verwerkingLine > 0) rijen.push([T.vermedenProc + ':', plus(r.verwerkingLine)]);
+    if (r.aanvoerLine > 0) rijen.push([T.aanvoer + ':', minus(r.aanvoerLine)]);
+    rijen.push(
+      [T.compost + ':', plus(r.compostValue)],
+      [T.stroom.replace('&amp;', '&') + ':', minus(r.ownElec)],
+      [T.onderhoud.replace('&amp;', '&') + ':', minus(r.onderhoud)],
+      [T.bBesparing, euro(r.jaarBesparing)],
+      [],
+      [ML.inv, `${euro(r.investering)} (${T.systeem.toLowerCase()} ${maal}${euro(r.modulePrice)}, ${T.installatie.toLowerCase()} ${maal}${euro(r.installCost)})`],
+      [ML.resultaat(r.lifetime), `${euro(r.jaarBesparing * r.lifetime)} ${ML.totaal}, ${minus(r.investering)}, ${ML.netto} ${signed(r.naLevensduur)}`],
+      [ML.co2, `${ton(r.co2Net)}${T.bTonJaar} (${ML.co2Stoken} ${ton(r.co2Stoken)}, ${ML.co2Compost} ${ton(r.co2Compost)})`],
+    );
+    // Labels uitlijnen op de langste, zodat de mail in beide talen netjes oogt.
+    const breed = Math.max(...rijen.filter((x) => x.length === 2).map((x) => x[0].length)) + 2;
+    const regels = rijen.map((x) => (x.length === 2 ? x[0].padEnd(breed) + x[1] : (x[0] || '')));
 
     const kort = r.payback
       ? r.modules + (r.modules === 1 ? T.kort1 : T.kortN) + ', ' + euro(r.jaarBesparing)
@@ -661,13 +725,30 @@
     // kolommen van kan maken in plaats van één tekstblok
     const uitkomst = {
       'Aanbevolen modules': r.modules,
-      'Jaarlijkse besparing (€)': Math.round(r.jaarBesparing),
-      'Totale investering (€)': Math.round(r.investering),
-      'Terugverdientijd (jaar)': r.payback ? Number(r.payback.toFixed(1)) : '',
+      'Begrensd door': r.grens === 'mat' ? 'beschikbaar materiaal' : (r.grens || ''),
+      'Stookmaanden': stookmaanden(),
+      'Doorcomposteren': (zomer && zomer.checked) || stookmaanden() >= 12 ? 'ja' : 'nee',
+      'Benutte warmte per module (kWh/jaar)': r.heatPerModule,
       'Warmtedekking (%)': Math.round(r.dekking * 100),
       'Verwerkt materiaal (m³/jaar)': Math.round(r.processedM3),
+      'Eigen materiaal (m³/jaar)': Math.round(r.ownM3),
+      'Aangevoerd materiaal (m³/jaar)': Math.round(r.aanvoerM3),
+      'Vermeden energiekosten (€)': Math.round(r.vermedenEnergie),
+      'Vermeden verwerkingskosten (€)': Math.round(r.verwerkingLine),
+      'Aanvoerkosten (€)': Math.round(r.aanvoerLine),
+      'Compostopbrengst (€)': Math.round(r.compostValue),
+      'Eigen stroomverbruik (€)': Math.round(r.ownElec),
+      'Onderhoud (€)': Math.round(r.onderhoud),
+      'Jaarlijkse besparing (€)': Math.round(r.jaarBesparing),
+      'Totale investering (€)': Math.round(r.investering),
+      'Systeem per module (€)': Math.round(r.modulePrice),
+      'Installatie per module (€)': Math.round(r.installCost),
+      'Terugverdientijd (jaar)': r.payback ? Number(r.payback.toFixed(1)) : '',
+      'Totale opbrengst levensduur (€)': Math.round(r.jaarBesparing * r.lifetime),
+      'Netto resultaat levensduur (€)': Math.round(r.naLevensduur),
       'Vermeden CO2 (ton/jaar)': Number((Math.max(0, r.co2Net) / 1000).toFixed(1)),
-      'Begrensd door': r.grens === 'mat' ? 'beschikbaar materiaal' : (r.grens || ''),
+      'Vermeden CO2 door minder stoken (ton/jaar)': Number((Math.max(0, r.co2Stoken) / 1000).toFixed(1)),
+      'CO2 vastgelegd in compost (ton/jaar)': Number((Math.max(0, r.co2Compost) / 1000).toFixed(1)),
     };
 
     return { kort, tekst: regels.join('\n'), velden: verzamelVelden(), uitkomst, taal: LANG };
