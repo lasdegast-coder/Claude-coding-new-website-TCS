@@ -153,14 +153,14 @@
   if (gasInput) gasInput.addEventListener('input', () => { gasTouched = true; });
 
   // Gasprijs per segment: tuincentra en kassen hebben een lager tarief.
-  const GAS_PRICE_PER_SEG = { vee: 1.65, terrein: 1.65, kas: 1.55 };
+  const GAS_PRICE_PER_SEG = { vee: 1.65, terrein: 1.65, kas: 1.35 };
   const priceInput = document.getElementById('roi-gas-price');
   let priceTouched = false;
   if (priceInput) priceInput.addEventListener('input', () => { priceTouched = true; });
 
-  // Verwerkingskosten per soort reststroom: mest 35 per m³, overige stromen
-  // 10 cent per kg, ongeveer 45 per m³.
-  const PROC_PER_TYPE = { mest: 35, groen: 45, overig: 45 };
+  // Verwerkingskosten per soort reststroom: mest 35 per m³, groen- en snoeiafval
+  // meestal geen (blijft op het terrein), overig 10 cent per kg, ongeveer 45 per m³.
+  const PROC_PER_TYPE = { mest: 35, groen: 0, overig: 45 };
   const procInput = document.getElementById('roi-proc');
   let procTouched = false;
   if (procInput) procInput.addEventListener('input', () => { procTouched = true; });
@@ -205,7 +205,7 @@
       [...typeInput.options].forEach((o) => { o.selected = o.defaultSelected = (o.value === t); });
     }
     const soort = typeInput ? typeInput.value : 'geen';
-    if (procInput && !procTouched && PROC_PER_TYPE[soort]) vulIn(procInput, PROC_PER_TYPE[soort]);
+    if (procInput && !procTouched && soort in PROC_PER_TYPE) vulIn(procInput, PROC_PER_TYPE[soort]);
 
     const type = document.getElementById('roi-type').value;
     const hasFeed = type !== 'geen';
