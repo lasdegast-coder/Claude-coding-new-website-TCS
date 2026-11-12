@@ -42,8 +42,9 @@
   const T_DS_BOERINN = 9.7 * FILL_M3 / 55;
   const VERLAGING_OVERIG = 1 - T_DS_BOERINN / T_DS_FILL;   // ongeveer 0,27
   // Tuincentrum en kas: bij advies van meer dan één module hooguit 70 % van de
-  // warmtevraag dekken, om efficiëntieredenen in de praktijk.
+  // warmtevraag dekken, om efficiëntieredenen in de praktijk; met eigen 'overig' 55 %.
   const DEKKING_MAX_KAS = 0.7;
+  const DEKKING_MAX_KAS_OVERIG = 0.55;
   // Tuincentrum en kas: Thermal Compost voert hooguit de helft aan van het materiaal
   // dat de modules bij deze warmtevraag nodig hebben. Minder eigen materiaal betekent
   // dan minder modules, maar nooit minder dan één.
@@ -275,7 +276,10 @@
       if (!(heatDemand > 0 && heat > 0)) return 0;
       const vol = Math.floor(heatDemand / heat);
       if (vol < 1) return heatDemand >= minDemand ? 1 : 0;
-      if (s === 'kas' && vol > 1) return Math.max(1, Math.floor(DEKKING_MAX_KAS * heatDemand / heat));
+      if (s === 'kas' && vol > 1) {
+        const max = type === 'overig' ? DEKKING_MAX_KAS_OVERIG : DEKKING_MAX_KAS;
+        return Math.max(1, Math.floor(max * heatDemand / heat));
+      }
       return vol;
     };
     // Warmte per module hangt bij 'overig' af van het aandeel eigen materiaal, en dat
