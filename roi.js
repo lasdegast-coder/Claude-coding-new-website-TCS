@@ -235,7 +235,7 @@
   }
 
   // ---- berekening ----
-  function calc(zomerKeuze) {
+  function calcKern(zomerKeuze, maxM = Infinity) {
     const energy = document.getElementById('roi-energy').value;
     const type = document.getElementById('roi-type').value;
     const s = seg();
@@ -327,21 +327,21 @@
     };
     // Warmte per module hangt bij 'overig' af van het aandeel eigen materiaal, en dat
     // aandeel van het aantal modules. Een paar rondes rekenen zetten dat vast.
-    let heatPerModule, modules, aandeel = 0;
+    let heatPerModule, modules, nWarmte = 0, aandeel = 0;
     if (kwhTouched) {
       heatPerModule = num('a-kwh');
       kasDekkingGrens = false; materiaalGrens = false;
-      const n = aantalVoor(heatPerModule);
-      modules = begrens(n, volumeVoor(n, heatPerModule));
+      nWarmte = aantalVoor(heatPerModule);
+      modules = Math.min(begrens(nWarmte, volumeVoor(nWarmte, heatPerModule)), maxM);
     } else {
       const ronde = (a) => {
         const heat = Math.round(heatNormaal * (1 - VERLAGING_OVERIG * a) / 100) * 100;
         kasDekkingGrens = false; materiaalGrens = false;
         const n = aantalVoor(heat);
-        const m = begrens(n, volumeVoor(n, heat));
-        const volgend = type === 'overig' && m > 0
-          ? Math.min(1, volumeVoor(m, heat) / (m * m3PerModule)) : a;
-        return { heat, m, volgend, kd: kasDekkingGrens, mg: materiaalGrens };
+        const vol = volumeVoor(n, heat);
+        const m = Math.min(begrens(n, vol), maxM);
+        const volgend = type === 'overig' && m > 0 ? Math.min(1, vol / (m * m3PerModule)) : a;
+        return { heat, n, m, volgend, kd: kasDekkingGrens, mg: materiaalGrens };
       };
       aandeel = type === 'overig' ? 1 : 0;
       let uit = ronde(aandeel);
@@ -358,11 +358,11 @@
         }
         gezien.push(uit.m);
       }
-      heatPerModule = uit.heat; modules = uit.m;
+      heatPerModule = uit.heat; modules = uit.m; nWarmte = uit.n;
       kasDekkingGrens = uit.kd; materiaalGrens = uit.mg;
     }
     const eigenNodig = modules * fills * eigenPerVulling;   // eigen reststroom die de modules opnemen
-    const volume = volumeVoor(modules, heatPerModule);
+    const volume = volumeVoor(Math.max(nWarmte, modules), heatPerModule);
     // Het aantal volgt altijd uit de warmtevraag; dat tonen we, anders lijkt de
     // rekenhulp stuk als meer reststroom invullen niets verandert.
     const grens = modules < 1 ? null
@@ -422,6 +422,25 @@
     };
   }
 
+  // Een module komt er alleen bij als de terugverdientijd daardoor hooguit PAYBACK_MARGE
+  // jaar langer wordt dan bij één module minder. Zonder die rem kan meer eigen materiaal
+  // een extra, grotendeels aangevoerde module opleveren en de terugverdientijd ineens
+  // verlengen; met de rem loopt de uitkomst geleidelijk.
+  const PAYBACK_MARGE = 0.5;
+  function calc(zomerKeuze) {
+    const vrij = calcKern(zomerKeuze);
+    if (vrij.modules <= 1 || !vrij.payback) return vrij;
+    let gekozen = calcKern(zomerKeuze, 1);
+    if (!gekozen.payback) return vrij;
+    for (let m = 2; m <= vrij.modules; m++) {
+      const kandidaat = m === vrij.modules ? vrij : calcKern(zomerKeuze, m);
+      if (!kandidaat.payback || kandidaat.payback > gekozen.payback + PAYBACK_MARGE) break;
+      gekozen = kandidaat;
+    }
+    if (gekozen.modules < vrij.modules) gekozen.grens = gekozen.type === 'geen' ? 'mat' : T.grensFeed;
+    return gekozen;
+  }
+
   /* De standaardwaarde van een aanname. De warmte per module is de uitzondering:
      die vult het formulier zelf in op basis van het gekozen segment. */
   let kwhStandaard = '';
@@ -459,8 +478,18 @@
     // De standaardstand gaat mee, zodat een automatisch vinkje niet telt als
     // iets wat de bezoeker zelf heeft aangepast.
     if (summerEl && !summerTouched && stookmaanden() < 12) {
+      // Kies de optie met het beste resultaat over de levensduur, tenzij de terugverdientijd
+      // daarvan meer dan PAYBACK_MARGE jaar langer is dan die van de andere optie.
       const zonder = calc(false), met = calc(true);
-      const beter = met.modules > 0 && met.jaarBesparing > 0 && met.naLevensduur > zonder.naLevensduur;
+      let beter;
+      if (!met.payback || met.modules < 1) beter = false;
+      else if (!zonder.payback || zonder.modules < 1) beter = true;
+      else {
+        const meer = met.naLevensduur > zonder.naLevensduur ? met : zonder;
+        const ander = meer === met ? zonder : met;
+        const keuze = meer.payback <= ander.payback + PAYBACK_MARGE ? meer : ander;
+        beter = keuze === met;
+      }
       summerEl.checked = beter;
       summerEl.defaultChecked = beter;
     }
