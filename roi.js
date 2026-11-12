@@ -49,9 +49,10 @@
   // dat de modules bij deze warmtevraag nodig hebben. Minder eigen materiaal betekent
   // dan minder modules, maar nooit minder dan één.
   const AANVOER_MAX_KAS = 0.5;
-  // Tuincentrum en kas: als de bezoeker zelf geen hoeveelheid invult, vullen de eerste twee
-  // modules zich met eigen materiaal (naar rato van de benutte warmte). Vanaf de derde module
-  // rekenen we met 1 m³ reststroom per 1.000 m³ aardgas(-equivalent) dat daarna overblijft.
+  // Tuincentrum en kas: als de bezoeker zelf geen hoeveelheid invult, is er eigen materiaal
+  // genoeg voor twee modules. Boven het verbruik waarbij de rekenhulp twee modules adviseert,
+  // komt er 1 m³ eigen reststroom bij per 1.000 m³ aardgas(-equivalent). De rest voert
+  // Thermal Compost aan, tot dat meer dan de helft van het materiaal in de modules zou zijn.
   const KAS_M3_PER_1000_GAS = 1;
   // Vermeden CO₂ door minder stoken. Aardgas: 56,2 kg CO₂/GJ x 31,65 MJ/Nm³ = 1,78 kg per m³
   // (RVO, Nederlandse energiedragerlijst januari 2026; CO2emissiefactoren.nl 1,782 kg/Nm³).
@@ -292,26 +293,35 @@
       return vol;
     };
     // Eigen reststroom als de bezoeker zelf niets invult. Veehouder en terreinbeheerder:
-    // wat de modules opnemen. Tuincentrum en kas: de eerste twee modules naar rato van de
-    // benutte warmte, vanaf de derde 1 m³ per 1.000 m³ aardgas dat daarna overblijft.
+    // wat de modules opnemen. Tuincentrum en kas: één module naar rato van de benutte warmte;
+    // vanaf twee modules genoeg voor twee, plus 1 m³ per 1.000 m³ aardgas boven het verbruik
+    // waarbij de rekenhulp twee modules gaat adviseren.
     const gasEquivalent = heatDemand / (GAS_KWH_M3 * BOILER_EFF);
+    const heatVol = kwhTouched ? num('a-kwh')
+      : Math.round(heatNormaal * (1 - (type === 'overig' ? VERLAGING_OVERIG : 0)) / 100) * 100;
+    const dekkingKas = type === 'overig' ? DEKKING_MAX_KAS_OVERIG : DEKKING_MAX_KAS;
+    const gasTweeModules = 2 * heatVol / (dekkingKas * GAS_KWH_M3 * BOILER_EFF);
     const volumeVoor = (n, heat) => {
       if (type === 'geen') return 0;
       if (volTouched) return num('roi-volume');
       const perModule = fills * eigenPerVulling;
       if (s !== 'kas') return n * perModule;
-      const gebruikt = n > 0 && heat > 0 ? Math.min(1, heatDemand / (n * heat)) : 1;
-      if (n <= 2) return n * perModule * gebruikt;
-      const restGas = Math.max(0, gasEquivalent - 2 * heat / (GAS_KWH_M3 * BOILER_EFF));
-      return 2 * perModule + restGas * KAS_M3_PER_1000_GAS / 1000;
+      if (n <= 1) {
+        const gebruikt = n > 0 && heat > 0 ? Math.min(1, heatDemand / (n * heat)) : 1;
+        return n * perModule * gebruikt;
+      }
+      return 2 * perModule + Math.max(0, gasEquivalent - gasTweeModules) * KAS_M3_PER_1000_GAS / 1000;
     };
     // Plafond op de aanvoer bij tuincentrum en kas (niet bij mest: dat vult het eigen terrein aan).
+    // Met eigen materiaal: Thermal Compost levert hooguit de helft van wat er in de modules gaat.
+    // Zonder eigen materiaal: hooguit de helft van wat de modules bij de warmtevraag nodig hebben.
     const aanvoerPlafond = s === 'kas' && type !== 'mest';
     let materiaalGrens = false;
     const begrens = (n, vol) => {
       if (!aanvoerPlafond || n <= 1) return n;
-      const maxAanvoer = AANVOER_MAX_KAS * n * m3PerModule;
-      const kan = Math.max(1, Math.floor((vol + maxAanvoer) / m3PerModule));
+      const kan = type === 'geen'
+        ? Math.max(1, Math.floor(AANVOER_MAX_KAS * n * m3PerModule / m3PerModule))
+        : Math.max(1, Math.floor(vol / ((1 - AANVOER_MAX_KAS) * m3PerModule)));
       if (kan < n) { materiaalGrens = true; return kan; }
       return n;
     };
@@ -355,7 +365,8 @@
     const volume = volumeVoor(modules, heatPerModule);
     // Het aantal volgt altijd uit de warmtevraag; dat tonen we, anders lijkt de
     // rekenhulp stuk als meer reststroom invullen niets verandert.
-    const grens = modules < 1 ? null : (materiaalGrens ? 'mat' : (kasDekkingGrens ? T.grensFeed : T.grensHeat));
+    const grens = modules < 1 ? null
+      : (materiaalGrens ? (type === 'geen' ? 'mat' : T.grensFeed) : (kasDekkingGrens ? T.grensFeed : T.grensHeat));
 
     const heatCovered = Math.min(modules * heatPerModule, heatDemand);
 
