@@ -1377,17 +1377,19 @@ a.partner-logo:hover { opacity: .7; }
 .roi-sec { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin-bottom: var(--sp-4); }
 .roi-sec > div { background: rgba(255,255,255,.07); border-radius: var(--r-sm); padding: 12px 14px; }
 .roi-sec dt { font-size: .76rem; color: rgba(255,255,255,.7); margin-bottom: 4px; }
-.roi-sec dd { font-family: var(--font-serif); font-size: 1.24rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.roi-sec .roi-sub { display: block; margin-top: 2px; font-family: var(--font-sans); font-size: .72rem; font-weight: 500; color: rgba(255,255,255,.6); }
+.roi-sec dd { font-family: var(--font-serif); font-size: 1.24rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.roi-sec .roi-sub { display: block; margin-top: 2px; font-family: var(--font-sans); font-size: .72rem; font-weight: 500; line-height: 1.35; color: rgba(255,255,255,.6); }
+.roi-sec .roi-sub + .roi-sub { margin-top: 0; }
 /* bovenste twee tegels spiegelen elkaar: links uitgelijnd en rechts uitgelijnd, met ruime marge
    zodat ze naar het midden neigen;
    onderste twee tegels: cijfers gecentreerd. Titels blijven links. */
-.roi-sec > div:nth-child(1) dd { text-align: left; padding-left: 18%; }
-.roi-sec > div:nth-child(2) dd { text-align: right; padding-right: 18%; }
+.roi-sec > div:nth-child(1) dd { text-align: left; padding-left: 12%; }
+.roi-sec > div:nth-child(2) dd { text-align: right; padding-right: 12%; }
 .roi-sec dd.roi-sum { display: grid; grid-template-columns: auto; justify-content: end; }
 .roi-sec > div:nth-child(n+3) dd { text-align: center; }
 .roi-sum .roi-sum-min { font-family: var(--font-sans); font-size: .72rem; font-weight: 500; color: rgba(255,255,255,.6); }
-.roi-sum .roi-sum-line { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,.14); margin: 3px 0 2px; }
+.roi-sum .roi-sum-line { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,.14); margin: 3px 0 3px; }
+.roi-sum .roi-sum-min { line-height: 1.35; }
 
 .roi-note { font-size: .8rem; line-height: 1.55; color: rgba(255,255,255,.68); margin-bottom: var(--sp-4); }
 .roi-note strong { color: rgba(255,255,255,.9); }

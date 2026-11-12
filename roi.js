@@ -147,7 +147,7 @@
 
   // Ook het gasverbruik verschilt sterk per segment: een veehouderij stookt een
   // veelvoud van een tuincentrum. Vult het veld voor, tenzij de bezoeker het zelf aanpast.
-  const GAS_PER_SEG = { vee: 65000, terrein: 20000, kas: 100000 };
+  const GAS_PER_SEG = { vee: 65000, terrein: 20000, kas: 70000 };
   const gasInput = document.getElementById('roi-gas-m3');
   let gasTouched = false;
   if (gasInput) gasInput.addEventListener('input', () => { gasTouched = true; });
