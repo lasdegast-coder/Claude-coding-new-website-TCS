@@ -70,7 +70,7 @@
       aanvoer: 'Aanvoerkosten feedstock', compost: 'Compostopbrengst',
       stroom: 'Eigen stroomverbruik', onderhoud: 'Onderhoud &amp; beheer',
       besparing: 'Jaarlijkse besparing', terugverdientijd: 'Terugverdientijd',
-      investering: 'Totale investering', naJaar: (n) => `Resultaat na ${n} jaar`, invKort: 'investering',
+      investering: 'Totale investering', naJaar: (n) => `Resultaat na ${n} jaar`, systeem: 'Systeem', installatie: 'Installatie',
       modules: 'Aanbevolen modules', co2: 'Vermeden CO₂', tonJr: ' ton/jr',
       note: 'Indicatie op basis van uw invoer en de getoonde aannames. Subsidie (SDE++/ISDE) is <strong>niet</strong> meegerekend en kan de terugverdientijd verder verkorten.',
       noteOnzeker: ' De exacte warmteopbrengst van deze reststroom stellen we samen met u vast.',
@@ -103,7 +103,7 @@
       aanvoer: 'Feedstock supply costs', compost: 'Compost revenue',
       stroom: 'Own electricity use', onderhoud: 'Maintenance &amp; management',
       besparing: 'Annual saving', terugverdientijd: 'Payback period',
-      investering: 'Total investment', naJaar: (n) => `Result after ${n} years`, invKort: 'investment',
+      investering: 'Total investment', naJaar: (n) => `Result after ${n} years`, systeem: 'System', installatie: 'Installation',
       modules: 'Recommended modules', co2: 'Avoided CO₂', tonJr: ' tonnes/yr',
       note: 'An indication based on your input and the assumptions shown. Subsidy (SDE++/ISDE) is <strong>not</strong> included and can shorten the payback period further.',
       noteOnzeker: ' We establish the exact heat yield of this residual stream together with you.',
@@ -310,7 +310,7 @@
       vermedenEnergie, verwerkingLine, aanvoerLine, compostValue, ownElec, onderhoud,
       jaarBesparing, investering, payback, naLevensduur, lifetime, co2Net,
       heatDemand, volume, grens, minDemand,
-      dekking, perModule: modulePrice + installCost,
+      dekking, perModule: modulePrice + installCost, modulePrice, installCost,
       processedM3, eigenNodig, feedDekking: hasFeed && volume > 0 ? Math.min(1, ownM3 / volume) : 0,
     };
   }
@@ -385,8 +385,16 @@
 
     // Bij meer dan één module de verdubbeling van de investering navolgbaar maken,
     // en laten zien welk deel van de warmtevraag er gedekt wordt.
-    const perStuk = r.modules > 1
-      ? `<span class="roi-sub">${r.modules} × ${euro(r.perModule)}</span>` : '';
+    // investering uitgesplitst in systeem en installatie, per module als het er meer zijn
+    const maal = r.modules > 1 ? `${r.modules} × ` : '';
+    const perStuk = `<span class="roi-sub">${T.systeem} ${maal}${euro(r.modulePrice)}</span>`
+      + `<span class="roi-sub">${T.installatie} ${maal}${euro(r.installCost)}</span>`;
+    // resultaat als kleine optelsom: totale opbrengst, min investering, netto
+    const som = `<dd class="roi-sum">`
+      + `<span></span><span>${euro(r.jaarBesparing * r.lifetime)}</span>`
+      + `<span class="roi-sum-min">–</span><span class="roi-sum-min">${euro(r.investering)}</span>`
+      + `<span class="roi-sum-line"></span>`
+      + `<span>${r.naLevensduur >= 0 ? '+' : '–'}</span><span>${euro(Math.abs(r.naLevensduur))}</span></dd>`;
     // laat zien welke van de twee grenzen het aantal bepaalt
     const grensTxt = r.grens
       ? `<span class="roi-sub">${T.grensPre}${r.grens}</span>` : '';
@@ -426,7 +434,7 @@
       <ul class="roi-lines">${lines.join('')}</ul>
       <dl class="roi-sec">
         <div><dt>${T.investering}</dt><dd>${euro(r.investering)}${perStuk}</dd></div>
-        <div><dt>${T.naJaar(r.lifetime)}</dt><dd>${euro(r.jaarBesparing * r.lifetime)}<span class="roi-sub">${minus(r.investering)} ${T.invKort}</span><span class="roi-net">${signed(r.naLevensduur)}</span></dd></div>
+        <div><dt>${T.naJaar(r.lifetime)}</dt>${som}</div>
         <div><dt>${T.modules}</dt><dd>${r.modules}${grensTxt}</dd></div>
         <div><dt>${T.co2}</dt><dd>${nl1.format(Math.max(0, r.co2Net) / 1000)}${T.tonJr}</dd></div>
       </dl>
