@@ -35,6 +35,15 @@
   // één module, ook als die niet al zijn warmte kwijt kan: de reden kan ook biologisch,
   // circulair of PR zijn.
   const MIN_GAS_M3 = 3000;
+  // Overig organisch materiaal levert minder warmte per vulling: we rekenen met de
+  // gemeten vulling van De Boerinn, 9,7 t droge stof in 55 m³, omgerekend 10,6 t per
+  // 60 m³ in plaats van 14,6 t. De verlaging schaalt mee met het aandeel eigen
+  // 'overig' in de vulling; aangevoerd materiaal rekent met de normale warmte.
+  const T_DS_BOERINN = 9.7 * FILL_M3 / 55;
+  const VERLAGING_OVERIG = 1 - T_DS_BOERINN / T_DS_FILL;   // ongeveer 0,27
+  // Tuincentrum en kas: bij advies van meer dan één module hooguit 70 % van de
+  // warmtevraag dekken, om efficiëntieredenen in de praktijk.
+  const DEKKING_MAX_KAS = 0.7;
   // Benutte warmte per module per jaar, afgerond op 100 kWh: 92.300 bij 8 stookmaanden, 138.400 bij 12.
   const kwhVoor = (maanden) => Math.round(KWH_PER_FILL * maanden / MONTHS_PER_FILL / 100) * 100;
 
@@ -193,7 +202,6 @@
     document.querySelector('.roi-when-anders').hidden = energy !== 'anders';
 
     // benutte warmte per module volgt de stookmaanden, zolang de bezoeker het veld niet zelf invulde
-    if (kwhInput && !kwhTouched) kwhInput.value = kwhVoor(stookmaanden());
     const uit = document.getElementById('roi-months-out');
     if (uit) uit.textContent = String(stookmaanden());
     const zomer = document.querySelector('.roi-when-summer');
@@ -226,7 +234,7 @@
     const draaimaanden = door ? 12 : maanden;            // maanden waarin de module composteert
     const fills = draaimaanden / MONTHS_PER_FILL;        // vullingen per jaar
     const runHours = fills * FILL_HOURS;                 // draaiuren per jaar
-    const heatPerModule = num('a-kwh');                  // benutte kWh/jaar per module
+    const heatNormaal = kwhVoor(maanden);                // benutte kWh/jaar per module bij een normale vulling
     const modulePrice = num('a-price');
     const installCost = num('a-install');
     const maintenance = num('a-maint');
@@ -255,15 +263,34 @@
     // Is de vraag kleiner dan één module, maar minstens MIN_GAS_M3 aardgas, dan toch één
     // module die een deel van zijn warmte benut. De rest van de warmtevraag dekt de klant
     // met de bestaande installatie. De eigen reststroom begrenst het aantal niet.
+    // Bij een tuincentrum of kas met meer dan één module hooguit DEKKING_MAX_KAS.
     const minDemand = MIN_GAS_M3 * GAS_KWH_M3 * BOILER_EFF;
-    const volleModules = heatDemand > 0 && heatPerModule > 0
-      ? Math.floor(heatDemand / heatPerModule)
-      : 0;
-    const modules = volleModules >= 1 ? volleModules : (heatDemand >= minDemand && heatPerModule > 0 ? 1 : 0);
     const m3PerModule = fills * FILL_M3;
     const eigenPerVulling = EIGEN_M3_PER_VULLING[type] || 0;
-    const eigenNodig = modules * fills * eigenPerVulling;   // eigen reststroom die de modules opnemen
-    const volume = volTouched ? num('roi-volume') : eigenNodig;
+    const aantalVoor = (heat) => {
+      if (!(heatDemand > 0 && heat > 0)) return 0;
+      const vol = Math.floor(heatDemand / heat);
+      if (vol < 1) return heatDemand >= minDemand ? 1 : 0;
+      if (s === 'kas' && vol > 1) return Math.max(1, Math.floor(DEKKING_MAX_KAS * heatDemand / heat));
+      return vol;
+    };
+    // Warmte per module hangt bij 'overig' af van het aandeel eigen materiaal, en dat
+    // aandeel van het aantal modules. Een paar rondes rekenen zijn genoeg om dat vast te zetten.
+    let heatPerModule, modules, eigenNodig, volume;
+    if (kwhTouched) {
+      heatPerModule = num('a-kwh');
+      modules = aantalVoor(heatPerModule);
+    } else {
+      let aandeel = type === 'overig' ? 1 : 0;
+      for (let i = 0; i < 5; i++) {
+        heatPerModule = Math.round(heatNormaal * (1 - VERLAGING_OVERIG * aandeel) / 100) * 100;
+        modules = aantalVoor(heatPerModule);
+        if (type !== 'overig' || !volTouched || modules < 1) break;
+        aandeel = Math.min(1, num('roi-volume') / (modules * m3PerModule));
+      }
+    }
+    eigenNodig = modules * fills * eigenPerVulling;   // eigen reststroom die de modules opnemen
+    volume = volTouched ? num('roi-volume') : eigenNodig;
     // Het aantal volgt altijd uit de warmtevraag; dat tonen we, anders lijkt de
     // rekenhulp stuk als meer reststroom invullen niets verandert.
     const grens = modules < 1 ? null : T.grensHeat;
@@ -309,7 +336,7 @@
       s, type, hasFeed, energy, energyLabel, modules,
       vermedenEnergie, verwerkingLine, aanvoerLine, compostValue, ownElec, onderhoud,
       jaarBesparing, investering, payback, naLevensduur, lifetime, co2Net,
-      heatDemand, volume, grens, minDemand,
+      heatDemand, volume, grens, minDemand, heatPerModule,
       dekking, perModule: modulePrice + installCost, modulePrice, installCost,
       processedM3, eigenNodig, feedDekking: hasFeed && volume > 0 ? Math.min(1, ownM3 / volume) : 0,
     };
@@ -317,8 +344,9 @@
 
   /* De standaardwaarde van een aanname. De warmte per module is de uitzondering:
      die vult het formulier zelf in op basis van het gekozen segment. */
+  let kwhStandaard = '';
   const standaardVan = (el) => {
-    if (el.id === 'a-kwh') return String(kwhVoor(stookmaanden()));
+    if (el.id === 'a-kwh') return kwhStandaard;
     if (el.id === 'roi-gas-m3') return String(GAS_PER_SEG[seg()] || el.defaultValue);
     return el.defaultValue;
   };
@@ -347,7 +375,6 @@
   // ---- weergave ----
   function render() {
     sync();
-    toonReset();
     // Doorcomposteren alleen aanzetten als het over de levensduur meer oplevert.
     // De standaardstand gaat mee, zodat een automatisch vinkje niet telt als
     // iets wat de bezoeker zelf heeft aangepast.
@@ -362,6 +389,11 @@
       volInput.value = String(Math.round(r.eigenNodig));
       volInput.defaultValue = volInput.value;
     }
+    if (kwhInput && !kwhTouched) {
+      kwhInput.value = String(r.heatPerModule);
+      kwhStandaard = kwhInput.value;
+    }
+    toonReset();
 
     // Alleen bij 'overig organisch materiaal' is de warmteopbrengst echt onbekend,
     // dus daar blijven het labeltje en het voorbehoud in de voetnoot staan.
