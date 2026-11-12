@@ -44,6 +44,10 @@
   // Tuincentrum en kas: bij advies van meer dan één module hooguit 70 % van de
   // warmtevraag dekken, om efficiëntieredenen in de praktijk.
   const DEKKING_MAX_KAS = 0.7;
+  // Tuincentrum en kas: Thermal Compost voert hooguit de helft aan van het materiaal
+  // dat de modules bij deze warmtevraag nodig hebben. Minder eigen materiaal betekent
+  // dan minder modules, maar nooit minder dan één.
+  const AANVOER_MAX_KAS = 0.5;
   // Benutte warmte per module per jaar, afgerond op 100 kWh: 92.300 bij 8 stookmaanden, 138.400 bij 12.
   const kwhVoor = (maanden) => Math.round(KWH_PER_FILL * maanden / MONTHS_PER_FILL / 100) * 100;
 
@@ -71,7 +75,7 @@
       gasEq: (n) => `${n} m³ aardgas per jaar`, kwhEq: (n) => `${n} kWh per jaar`,
       warnNeg: 'Met deze invoer levert het systeem nog geen positieve jaarbesparing. Pas de hoeveelheden of aannames aan, of bespreek uw situatie met ons.',
       jaar: ' jaar', nvt: 'n.v.t.',
-      grensPre: 'begrensd door uw ', grensFeed: 'reststroom', grensHeat: 'warmtevraag',
+      grensPre: 'begrensd door uw ', grensFeed: 'reststroom', grensHeat: 'warmtevraag', grensMat: 'begrensd door beschikbaar materiaal',
       dektHeat: (p) => `dekt ${p}% van uw warmtevraag`,
       dektHeatVol: 'dekt uw volledige warmtevraag',
       dektFeed: (p) => `dekt ${p}% van uw verwerkingskosten`,
@@ -104,7 +108,7 @@
       gasEq: (n) => `${n} m³ of natural gas per year`, kwhEq: (n) => `${n} kWh per year`,
       warnNeg: 'With this input the system does not yet produce a positive annual saving. Adjust the amounts or the assumptions, or talk your situation through with us.',
       jaar: ' years', nvt: 'n/a',
-      grensPre: 'limited by your ', grensFeed: 'residual material', grensHeat: 'heat demand',
+      grensPre: 'limited by your ', grensFeed: 'residual material', grensHeat: 'heat demand', grensMat: 'limited by available material',
       dektHeat: (p) => `covers ${p}% of your heat demand`,
       dektHeatVol: 'covers your entire heat demand',
       dektFeed: (p) => `covers ${p}% of your processing costs`,
@@ -276,15 +280,27 @@
     };
     // Warmte per module hangt bij 'overig' af van het aandeel eigen materiaal, en dat
     // aandeel van het aantal modules. Een paar rondes rekenen zijn genoeg om dat vast te zetten.
+    // Plafond op de aanvoer bij tuincentrum en kas (niet bij mest: dat vult het eigen terrein aan).
+    const aanvoerPlafond = s === 'kas' && type !== 'mest';
+    const eigenVolume = () => (type === 'geen' ? 0 : (volTouched ? num('roi-volume') : Infinity));
+    let materiaalGrens = false;
+    const begrens = (n) => {
+      if (!aanvoerPlafond || n <= 1) return n;
+      const maxAanvoer = AANVOER_MAX_KAS * n * m3PerModule;
+      const kan = Math.max(1, Math.floor((eigenVolume() + maxAanvoer) / m3PerModule));
+      if (kan < n) { materiaalGrens = true; return kan; }
+      return n;
+    };
     let heatPerModule, modules, eigenNodig, volume;
     if (kwhTouched) {
       heatPerModule = num('a-kwh');
-      modules = aantalVoor(heatPerModule);
+      modules = begrens(aantalVoor(heatPerModule));
     } else {
       let aandeel = type === 'overig' ? 1 : 0;
       for (let i = 0; i < 5; i++) {
         heatPerModule = Math.round(heatNormaal * (1 - VERLAGING_OVERIG * aandeel) / 100) * 100;
-        modules = aantalVoor(heatPerModule);
+        materiaalGrens = false;
+        modules = begrens(aantalVoor(heatPerModule));
         if (type !== 'overig' || !volTouched || modules < 1) break;
         aandeel = Math.min(1, num('roi-volume') / (modules * m3PerModule));
       }
@@ -293,7 +309,7 @@
     volume = volTouched ? num('roi-volume') : eigenNodig;
     // Het aantal volgt altijd uit de warmtevraag; dat tonen we, anders lijkt de
     // rekenhulp stuk als meer reststroom invullen niets verandert.
-    const grens = modules < 1 ? null : T.grensHeat;
+    const grens = modules < 1 ? null : (materiaalGrens ? 'mat' : T.grensHeat);
 
     const heatCovered = Math.min(modules * heatPerModule, heatDemand);
 
@@ -430,7 +446,7 @@
       + `<span>${signed(r.naLevensduur)}</span></dd>`;
     // laat zien welke van de twee grenzen het aantal bepaalt
     const grensTxt = r.grens
-      ? `<span class="roi-sub">${T.grensPre}${r.grens}</span>` : '';
+      ? `<span class="roi-sub">${r.grens === 'mat' ? T.grensMat : T.grensPre + r.grens}</span>` : '';
     // Elke opbrengstregel die tegen een capaciteitsgrens aanloopt legt zichzelf uit.
     // Regels die de volle vraag dekken blijven schoon.
     const dekPct = Math.round(r.dekking * 100);
@@ -647,7 +663,7 @@
       'Warmtedekking (%)': Math.round(r.dekking * 100),
       'Verwerkt materiaal (m³/jaar)': Math.round(r.processedM3),
       'Vermeden CO2 (ton/jaar)': Number((Math.max(0, r.co2Net) / 1000).toFixed(1)),
-      'Begrensd door': r.grens || '',
+      'Begrensd door': r.grens === 'mat' ? 'beschikbaar materiaal' : (r.grens || ''),
     };
 
     return { kort, tekst: regels.join('\n'), velden: verzamelVelden(), uitkomst, taal: LANG };
