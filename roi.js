@@ -153,7 +153,7 @@
   if (gasInput) gasInput.addEventListener('input', () => { gasTouched = true; });
 
   // Gasprijs per segment: tuincentra en kassen hebben een lager tarief.
-  const GAS_PRICE_PER_SEG = { vee: 1.65, terrein: 1.65, kas: 1.35 };
+  const GAS_PRICE_PER_SEG = { vee: 1.65, terrein: 1.75, kas: 1.35 };
   const priceInput = document.getElementById('roi-gas-price');
   let priceTouched = false;
   if (priceInput) priceInput.addEventListener('input', () => { priceTouched = true; });
@@ -386,15 +386,16 @@
     // Bij meer dan één module de verdubbeling van de investering navolgbaar maken,
     // en laten zien welk deel van de warmtevraag er gedekt wordt.
     // investering uitgesplitst in systeem en installatie, per module als het er meer zijn
-    const maal = r.modules > 1 ? `${r.modules} × ` : '';
-    const perStuk = `<span class="roi-sub">${T.systeem} ${maal}${euro(r.modulePrice)}</span>`
-      + `<span class="roi-sub">${T.installatie} ${maal}${euro(r.installCost)}</span>`;
+    const maal = r.modules > 1 ? `${r.modules}x ` : '';
+    const kort = (n) => '€' + nl0.format(Math.round(n));
+    const perStuk = `<span class="roi-sub">${T.systeem}: ${maal}${kort(r.modulePrice)}</span>`
+      + `<span class="roi-sub">${T.installatie}: ${maal}${kort(r.installCost)}</span>`;
     // resultaat als kleine optelsom: totale opbrengst, min investering, netto
     const som = `<dd class="roi-sum">`
-      + `<span></span><span>${euro(r.jaarBesparing * r.lifetime)}</span>`
-      + `<span class="roi-sum-min">–</span><span class="roi-sum-min">${euro(r.investering)}</span>`
+      + `<span>${euro(r.jaarBesparing * r.lifetime)}</span>`
+      + `<span class="roi-sum-min">${minus(r.investering)}</span>`
       + `<span class="roi-sum-line"></span>`
-      + `<span>${r.naLevensduur >= 0 ? '+' : '–'}</span><span>${euro(Math.abs(r.naLevensduur))}</span></dd>`;
+      + `<span>${signed(r.naLevensduur)}</span></dd>`;
     // laat zien welke van de twee grenzen het aantal bepaalt
     const grensTxt = r.grens
       ? `<span class="roi-sub">${T.grensPre}${r.grens}</span>` : '';
